@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { MoodSphere } from '../components/MoodSphere';
 import { MoodSlider } from '../components/MoodSlider';
 import { useMoodStore } from '../store/useMoodStore';
-import { Calendar, PenLine, X, Check } from 'lucide-react';
+import { useAuthStore } from '../store/useAuthStore';
+import { Calendar, PenLine, X, Check, User } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export const HomePage = () => {
@@ -14,11 +15,25 @@ export const HomePage = () => {
     setTodayBaseline, 
     addRecord 
   } = useMoodStore();
+
+  const { user, initAuth, logout } = useAuthStore();
   
   const navigate = useNavigate();
   const [isRecording, setIsRecording] = useState(false);
   const [recordNote, setRecordNote] = useState('');
   const [recordScore, setRecordScore] = useState(currentScore);
+
+  // Initialize auth on mount
+  useEffect(() => {
+    initAuth();
+  }, []);
+
+  // Sync data when user logs in
+  useEffect(() => {
+    if (user) {
+      useMoodStore.getState().syncFromCloud();
+    }
+  }, [user]);
 
   // Check for daily reset
   const todayStr = new Date().toISOString().split('T')[0];
@@ -89,7 +104,33 @@ export const HomePage = () => {
       
       {/* Header / Nav */}
       <div className="w-full max-w-md p-6 flex justify-between items-center z-20">
-        <span className="text-sm font-medium text-slate-400 tracking-widest uppercase">情绪观察员</span>
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={() => {
+              if (user) {
+                if (window.confirm('确定要退出登录吗？')) {
+                  logout();
+                }
+              } else {
+                navigate('/login');
+              }
+            }}
+            className={`p-2 rounded-full transition-colors ${user ? 'bg-slate-800 text-white shadow-lg' : 'bg-slate-200 text-slate-400 hover:bg-slate-300'} relative`}
+          >
+            <User size={20} />
+            {!user && (
+              <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white transform translate-x-1/3 -translate-y-1/3" />
+            )}
+          </button>
+        </div>
+        
+        <div className="flex flex-col items-center">
+          <span className="text-sm font-medium text-slate-400 tracking-widest uppercase">情绪观察员</span>
+          {!user && (
+            <span className="text-[10px] text-red-400 font-light mt-0.5 animate-pulse">未登录 (数据仅本地保存)</span>
+          )}
+        </div>
+        
         <button 
           onClick={() => navigate('/calendar')}
           className="p-2 rounded-full hover:bg-slate-100 transition-colors text-slate-600"
