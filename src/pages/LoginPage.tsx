@@ -15,8 +15,9 @@ export const LoginPage = () => {
     e.preventDefault();
     setMsg('');
     
-    if (!email || !password) {
-      setMsg('请输入邮箱和密码');
+    // 对于软登录模式，密码不是必须的，甚至邮箱也只是一个标识符
+    if (!email) {
+      setMsg('请输入邮箱 / 身份ID');
       return;
     }
 
@@ -31,13 +32,6 @@ export const LoginPage = () => {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6">
       <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8 relative">
-        <button 
-          onClick={() => navigate('/')}
-          className="absolute top-6 left-6 text-slate-400 hover:text-slate-600 transition-colors"
-        >
-          <ArrowLeft size={24} />
-        </button>
-
         <div className="text-center mb-8 mt-4">
           <h1 className="text-2xl font-bold text-slate-800">
             登录 / 同步

@@ -4,8 +4,10 @@ import { MoodSphere } from '../components/MoodSphere';
 import { MoodSlider } from '../components/MoodSlider';
 import { useMoodStore } from '../store/useMoodStore';
 import { useAuthStore } from '../store/useAuthStore';
-import { Calendar, PenLine, X, Check, User } from 'lucide-react';
+import { PenLine, X, Check, User } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { UserMenu } from '../components/UserMenu';
+import { audioPlayer } from '../services/AudioPlayer';
 
 export const HomePage = () => {
   const { 
@@ -35,6 +37,13 @@ export const HomePage = () => {
     }
   }, [user]);
 
+  // Preload audio when modal opens
+  useEffect(() => {
+    if (isRecording) {
+      audioPlayer.preload(recordScore);
+    }
+  }, [isRecording, recordScore]);
+
   // Check for daily reset
   const todayStr = new Date().toISOString().split('T')[0];
   const isNewDay = lastVisitDate !== todayStr;
@@ -49,6 +58,13 @@ export const HomePage = () => {
     }
   }, [isNewDay]);
 
+  // Preload audio when wake up score changes
+  useEffect(() => {
+    if (isWakeUp) {
+      audioPlayer.preload(wakeUpScore);
+    }
+  }, [wakeUpScore, isWakeUp]);
+
   const handleSetBaseline = () => {
     setTodayBaseline(wakeUpScore);
     setCurrentScore(wakeUpScore); // Sync current score
@@ -57,6 +73,9 @@ export const HomePage = () => {
       score: wakeUpScore,
       note: '晨间打卡'
     });
+    // Trigger sound
+    audioPlayer.play(wakeUpScore);
+    
     setIsWakeUp(false);
   };
 
@@ -66,6 +85,10 @@ export const HomePage = () => {
       note: recordNote || '记录当下'
     });
     setCurrentScore(recordScore);
+    
+    // Trigger sound
+    audioPlayer.play(recordScore);
+
     setIsRecording(false);
     setRecordNote('');
   };
@@ -86,11 +109,11 @@ export const HomePage = () => {
           
           <MoodSphere score={wakeUpScore} size={200} />
           
-          <MoodSlider value={wakeUpScore} onChange={setWakeUpScore} />
+          <MoodSlider value={wakeUpScore} onChange={setWakeUpScore} className="mt-8" />
           
           <button 
             onClick={handleSetBaseline}
-            className="px-8 py-3 rounded-full bg-slate-900 text-white font-medium hover:bg-slate-800 transition-colors shadow-lg shadow-slate-200"
+            className="px-8 py-3 rounded-full bg-slate-900 text-white font-medium hover:bg-slate-800 transition-colors shadow-lg shadow-slate-200 mt-4"
           >
             开启今日
           </button>
@@ -131,20 +154,14 @@ export const HomePage = () => {
           )}
         </div>
         
-        <button 
-          onClick={() => navigate('/calendar')}
-          className="p-2 rounded-full hover:bg-slate-100 transition-colors text-slate-600"
-        >
-          <Calendar size={24} />
-        </button>
+        <UserMenu />
       </div>
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col items-center justify-center w-full max-w-md relative z-10 -mt-10">
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col items-center justify-center w-full max-w-md z-10 min-h-[60vh]">
         <MoodSphere score={currentScore} size={320} />
         
-        {/* Actions */}
-        <div className="absolute bottom-20 w-full flex justify-center">
+        <div className="flex flex-col items-center gap-12 mt-12">
            <button 
              onClick={() => {
                setRecordScore(currentScore);
@@ -155,14 +172,13 @@ export const HomePage = () => {
              <PenLine size={18} />
              <span>记录当下</span>
            </button>
+           
+           <div className="text-center px-6">
+             <p className="text-xs text-slate-400 font-light leading-relaxed">
+               "无关好坏，每种情绪都是心灵的一部分，<br/>我们要做的，只是静静地感受、记录并默默地陪伴着它们便好。"
+             </p>
+           </div>
         </div>
-      </div>
-
-      {/* Quote */}
-      <div className="w-full max-w-md p-6 text-center z-10 pb-8">
-        <p className="text-xs text-slate-400 font-light leading-relaxed">
-          "每种情绪都是我们的一部分，<br/>我们只需要静静地感受、记录并不加评判地看着它们就好。"
-        </p>
       </div>
 
       {/* Record Modal/Overlay */}
@@ -193,7 +209,7 @@ export const HomePage = () => {
                 <textarea
                   value={recordNote}
                   onChange={(e) => setRecordNote(e.target.value)}
-                  placeholder="发生了什么？(可选)..."
+                  placeholder="今天的旅途中，你又遇到了哪些想要记录的事或情绪？(可选)"
                   maxLength={100}
                   className="w-full p-4 bg-slate-50 rounded-2xl resize-none focus:outline-none focus:ring-2 focus:ring-slate-200 text-slate-700 placeholder:text-slate-400 text-center"
                   rows={3}

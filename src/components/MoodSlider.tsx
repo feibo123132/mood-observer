@@ -1,4 +1,4 @@
-import { getMoodLabel, getMoodColor } from '../utils/moodUtils';
+import { getMoodState, getGradientColor } from '../utils/moodUtils';
 
 interface MoodSliderProps {
   value: number;
@@ -7,17 +7,33 @@ interface MoodSliderProps {
 }
 
 export const MoodSlider = ({ value, onChange, className = '' }: MoodSliderProps) => {
-  const color = getMoodColor(value);
-  const label = getMoodLabel(value);
+  const { label, description } = getMoodState(value);
+  const color = getGradientColor(value);
 
   return (
     <div className={`w-full max-w-md flex flex-col items-center gap-6 ${className}`}>
-      <div className="text-center space-y-1">
+      <div className="text-center space-y-2">
         <div className="text-3xl font-light transition-colors duration-300" style={{ color }}>
           {label}
         </div>
-        <div className="text-sm text-gray-400 font-mono tracking-wider">
-          SCORE: {value}
+        <div className="flex items-center justify-center gap-2 text-sm text-gray-400 font-mono tracking-wider">
+          SCORE: 
+          <input
+            type="number"
+            min="0"
+            max="100"
+            value={value}
+            onChange={(e) => {
+              let val = Number(e.target.value);
+              if (val < 0) val = 0;
+              if (val > 100) val = 100;
+              onChange(val);
+            }}
+            className="w-12 bg-transparent border-b border-gray-300 focus:border-slate-500 focus:outline-none text-center font-mono"
+          />
+        </div>
+        <div className="text-xs text-gray-500 max-w-[280px] mx-auto leading-relaxed mt-2 px-4 py-2 bg-slate-50/50 rounded-lg">
+          {description}
         </div>
       </div>
       

@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { useMemo } from 'react';
-import { getMoodColor } from '../utils/moodUtils';
+import { getMoodState, getGradientColor } from '../utils/moodUtils';
 
 interface MoodSphereProps {
   score: number;
@@ -9,7 +9,7 @@ interface MoodSphereProps {
 }
 
 export const MoodSphere = ({ score, size = 300, className = '' }: MoodSphereProps) => {
-  const color = useMemo(() => getMoodColor(score), [score]);
+  const color = useMemo(() => getGradientColor(score), [score]);
   
   // Calculate breathing duration based on score
   const getDuration = (s: number) => {
