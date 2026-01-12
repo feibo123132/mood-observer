@@ -38,6 +38,9 @@ export const HomePage = () => {
   const [isWakeUp, setIsWakeUp] = useState(false);
   const [wakeUpScore, setWakeUpScore] = useState(50);
 
+  // Debug State
+  const [lastAudioError, setLastAudioError] = useState<string>('');
+
   // Native Audio Ref
   const audioRef = useRef<HTMLAudioElement>(null);
 
@@ -53,6 +56,13 @@ export const HomePage = () => {
     
     return getAudioUrl(targetScore, audioMode);
   }, [isAudioEnabled, audioMode, isWakeUp, wakeUpScore, isRecording, recordScore, currentScore]);
+
+  // Force load when source changes (Crucial for mobile)
+  useEffect(() => {
+    if (activeAudioSrc && audioRef.current) {
+      audioRef.current.load();
+    }
+  }, [activeAudioSrc]);
 
   // Initialize auth on mount
   useEffect(() => {
@@ -93,7 +103,12 @@ export const HomePage = () => {
 
   const handleSaveRecord = () => {
     // Direct DOM play call - MUST be first
-    audioRef.current?.play().catch(e => console.log('Audio play failed', e));
+    audioRef.current?.play()
+      .then(() => setLastAudioError(''))
+      .catch(e => {
+        console.log('Audio play failed', e);
+        setLastAudioError(`${e.name}: ${e.message}`);
+      });
 
     addRecord({
       score: recordScore,
@@ -101,8 +116,11 @@ export const HomePage = () => {
     });
     setCurrentScore(recordScore);
     
-    setIsRecording(false);
-    setRecordNote('');
+    // Delay closing to prevent race condition and let audio start
+    setTimeout(() => {
+      setIsRecording(false);
+      setRecordNote('');
+    }, 1000);
   };
 
   // If Wake Up mode
@@ -249,6 +267,12 @@ export const HomePage = () => {
           </motion.div>
         )}
       </AnimatePresence>
+      {/* Debug UI (Temporary) */}
+      {lastAudioError && (
+        <div className="fixed bottom-0 left-0 right-0 bg-red-500/80 text-white text-[10px] p-1 text-center z-[100] pointer-events-none">
+          Audio Error: {lastAudioError}
+        </div>
+      )}
     </div>
   );
 };
