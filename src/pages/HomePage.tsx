@@ -80,15 +80,15 @@ export const HomePage = () => {
   };
 
   const handleSaveRecord = () => {
+    // Trigger sound first (Priority for Mobile Safari)
+    audioPlayer.play(recordScore);
+
     addRecord({
       score: recordScore,
       note: recordNote || '记录当下'
     });
     setCurrentScore(recordScore);
     
-    // Trigger sound
-    audioPlayer.play(recordScore);
-
     setIsRecording(false);
     setRecordNote('');
   };
@@ -164,6 +164,8 @@ export const HomePage = () => {
         <div className="flex flex-col items-center gap-12 mt-12">
            <button 
              onClick={() => {
+               // Preload audio immediately on user interaction
+               audioPlayer.preload(currentScore);
                setRecordScore(currentScore);
                setIsRecording(true);
              }}
