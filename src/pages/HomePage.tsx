@@ -1,13 +1,21 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MoodSphere } from '../components/MoodSphere';
 import { MoodSlider } from '../components/MoodSlider';
 import { useMoodStore } from '../store/useMoodStore';
 import { useAuthStore } from '../store/useAuthStore';
+import { useSettingsStore, AudioMode } from '../store/useSettingsStore';
 import { PenLine, X, Check, User } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { UserMenu } from '../components/UserMenu';
-import { audioPlayer } from '../services/AudioPlayer';
+
+// Helper function to get audio URL
+const getAudioUrl = (score: number, mode: AudioMode): string => {
+  let level = Math.floor(score / 10);
+  if (score >= 96) level = 10;
+  else if (score >= 90) level = 9;
+  return `/audio/${mode}/level_${level}.mp3`;
+};
 
 export const HomePage = () => {
   const { 
@@ -19,11 +27,32 @@ export const HomePage = () => {
   } = useMoodStore();
 
   const { user, initAuth, logout } = useAuthStore();
+  const { isAudioEnabled, audioMode } = useSettingsStore();
   
   const navigate = useNavigate();
   const [isRecording, setIsRecording] = useState(false);
   const [recordNote, setRecordNote] = useState('');
   const [recordScore, setRecordScore] = useState(currentScore);
+  
+  // Local state for "Wake Up" flow
+  const [isWakeUp, setIsWakeUp] = useState(false);
+  const [wakeUpScore, setWakeUpScore] = useState(50);
+
+  // Native Audio Ref
+  const audioRef = useRef<HTMLAudioElement>(null);
+
+  // Calculate active audio source based on current mode and score
+  const activeAudioSrc = useMemo(() => {
+    if (!isAudioEnabled) return undefined;
+    
+    // Determine which score to use
+    // If in wake up mode, use wakeUpScore
+    // If recording, use recordScore
+    // Otherwise fallback to currentScore (though not typically playing then)
+    const targetScore = isWakeUp ? wakeUpScore : (isRecording ? recordScore : currentScore);
+    
+    return getAudioUrl(targetScore, audioMode);
+  }, [isAudioEnabled, audioMode, isWakeUp, wakeUpScore, isRecording, recordScore, currentScore]);
 
   // Initialize auth on mount
   useEffect(() => {
@@ -37,35 +66,20 @@ export const HomePage = () => {
     }
   }, [user]);
 
-  // Preload audio when modal opens
-  useEffect(() => {
-    if (isRecording) {
-      audioPlayer.preload(recordScore);
-    }
-  }, [isRecording, recordScore]);
-
   // Check for daily reset
   const todayStr = new Date().toISOString().split('T')[0];
   const isNewDay = lastVisitDate !== todayStr;
   
-  // Local state for "Wake Up" flow
-  const [isWakeUp, setIsWakeUp] = useState(false);
-  const [wakeUpScore, setWakeUpScore] = useState(50);
-
   useEffect(() => {
     if (isNewDay) {
       setIsWakeUp(true);
     }
   }, [isNewDay]);
 
-  // Preload audio when wake up score changes
-  useEffect(() => {
-    if (isWakeUp) {
-      audioPlayer.preload(wakeUpScore);
-    }
-  }, [wakeUpScore, isWakeUp]);
-
   const handleSetBaseline = () => {
+    // Direct DOM play call - MUST be first
+    audioRef.current?.play().catch(e => console.log('Audio play failed', e));
+
     setTodayBaseline(wakeUpScore);
     setCurrentScore(wakeUpScore); // Sync current score
     // Add a record for baseline
@@ -73,15 +87,13 @@ export const HomePage = () => {
       score: wakeUpScore,
       note: '晨间打卡'
     });
-    // Trigger sound
-    audioPlayer.play(wakeUpScore);
     
     setIsWakeUp(false);
   };
 
   const handleSaveRecord = () => {
-    // Trigger sound first (Priority for Mobile Safari)
-    audioPlayer.play(recordScore);
+    // Direct DOM play call - MUST be first
+    audioRef.current?.play().catch(e => console.log('Audio play failed', e));
 
     addRecord({
       score: recordScore,
@@ -97,6 +109,14 @@ export const HomePage = () => {
   if (isWakeUp) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 relative overflow-hidden">
+        {/* Native Hidden Audio Element */}
+        <audio 
+          ref={audioRef} 
+          src={activeAudioSrc} 
+          style={{ display: 'none' }} 
+          preload="auto"
+        />
+
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -124,6 +144,13 @@ export const HomePage = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center relative overflow-hidden transition-colors duration-700">
+      {/* Native Hidden Audio Element */}
+      <audio 
+        ref={audioRef} 
+        src={activeAudioSrc} 
+        style={{ display: 'none' }} 
+        preload="auto"
+      />
       
       {/* Header / Nav */}
       <div className="w-full max-w-md p-6 flex justify-between items-center z-20">
@@ -164,8 +191,6 @@ export const HomePage = () => {
         <div className="flex flex-col items-center gap-12 mt-12">
            <button 
              onClick={() => {
-               // Preload audio immediately on user interaction
-               audioPlayer.preload(currentScore);
                setRecordScore(currentScore);
                setIsRecording(true);
              }}
