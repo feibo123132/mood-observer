@@ -48,9 +48,6 @@ class AudioPlayerService {
     audio.src = url;
     audio.preload = 'auto';
     
-    // 关键修复：显式调用 load() 以触发移动端缓冲
-    audio.load();
-    
     // 缓存起来
     this.audioCache.set(url, audio);
     this.lastPreloadedUrl = url;
