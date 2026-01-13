@@ -61,6 +61,7 @@ export const HomePage = () => {
   useEffect(() => {
     if (activeAudioSrc && audioRef.current) {
       audioRef.current.load();
+      console.log('Loading audio:', activeAudioSrc);
     }
   }, [activeAudioSrc]);
 
@@ -130,6 +131,7 @@ export const HomePage = () => {
       <audio 
         ref={audioRef} 
         src={activeAudioSrc} 
+        type="audio/mpeg"
         style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 0, height: 0 }} 
         preload="auto"
         playsInline
