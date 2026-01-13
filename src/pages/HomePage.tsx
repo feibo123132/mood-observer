@@ -4,6 +4,7 @@ import { MoodSphere } from '../components/MoodSphere';
 import { MoodSlider } from '../components/MoodSlider';
 import { useMoodStore } from '../store/useMoodStore';
 import { useAuthStore } from '../store/useAuthStore';
+import { useSettingsStore, AudioMode } from '../store/useSettingsStore';
 import { PenLine, X, Check, User } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { UserMenu } from '../components/UserMenu';
@@ -158,10 +159,12 @@ export const HomePage = () => {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col items-center justify-center w-full max-w-md z-10 min-h-[60vh]">
-        <MoodSphere score={currentScore} size={320} />
+      <div className="flex-1 flex flex-col items-center w-full max-w-md z-10">
+        <div className="flex-1 flex items-center justify-center w-full">
+          <MoodSphere score={currentScore} size={320} />
+        </div>
         
-        <div className="flex flex-col items-center gap-12 mt-12">
+        <div className="flex flex-col items-center gap-12 pb-24">
            <button 
              onClick={() => {
                setRecordScore(currentScore);

@@ -24,6 +24,8 @@ interface MoodState {
   
   isSyncing: boolean;
   syncFromCloud: () => Promise<void>;
+  
+  clearLocalData: () => void;
 }
 
 export const useMoodStore = create<MoodState>()(
@@ -44,6 +46,14 @@ export const useMoodStore = create<MoodState>()(
       records: [],
       
       isSyncing: false,
+
+      clearLocalData: () => set({
+        currentScore: 50,
+        todayBaseline: null,
+        lastVisitDate: null,
+        records: [],
+        isSyncing: false
+      }),
 
       syncFromCloud: async () => {
         // 使用软身份验证

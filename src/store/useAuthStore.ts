@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { auth, ENV_ID } from '../lib/cloudbase';
+import { useMoodStore } from './useMoodStore';
 
 interface User {
   uid: string;
@@ -52,6 +53,9 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   login: async (email, pass) => {
+    // 0. 安全时序：登录前先清空本地数据，确保白纸一张
+    useMoodStore.getState().clearLocalData();
+
     // 纯逻辑登录，不调用 auth.signIn...
     // 这里忽略密码验证（或者您可以硬编码一个简单的密码校验）
     set({ isLoading: true, error: null });
@@ -85,5 +89,8 @@ export const useAuthStore = create<AuthState>((set) => ({
     // 登出只清除本地身份，不切断底层连接
     localStorage.removeItem('mood_user_email');
     set({ user: null });
+    
+    // 安全时序：登出后立即清空本地数据
+    useMoodStore.getState().clearLocalData();
   }
 }));
