@@ -115,10 +115,10 @@ export const HomePage = () => {
       score: recordScore,
       note: recordNote || '记录当下'
     });
-    setCurrentScore(recordScore);
     
     // Delay closing to prevent race condition and let audio start
     setTimeout(() => {
+      setCurrentScore(recordScore);
       setIsRecording(false);
       setRecordNote('');
     }, 1000);
