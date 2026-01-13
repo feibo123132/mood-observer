@@ -130,12 +130,12 @@ export const HomePage = () => {
       {/* Global Audio Element - Persists across state changes */}
       <audio 
         ref={audioRef} 
-        src={activeAudioSrc} 
-        type="audio/mpeg"
         style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 0, height: 0 }} 
         preload="auto"
         playsInline
-      />
+      >
+        <source src={activeAudioSrc} type="audio/mpeg" />
+      </audio>
 
       {isWakeUp ? (
         // Wake Up View
