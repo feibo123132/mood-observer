@@ -319,6 +319,7 @@ export const ReviewPage = () => {
                 moodScores={weeklyRecords.map(r => r.score)} 
                 notes={weeklyRecords.map(r => r.note || '')}
                 weekNumber={selectedWeek.weekNumber}
+                year={selectedYear}
               />
             )}
 

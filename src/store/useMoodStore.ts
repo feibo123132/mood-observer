@@ -25,6 +25,11 @@ interface MoodState {
   isSyncing: boolean;
   syncFromCloud: () => Promise<void>;
   
+  // Weekly Reports
+  reports: Record<string, string>; // Key: "year-week", Value: report content
+  saveReport: (year: number, week: number, content: string) => void;
+  deleteReport: (year: number, week: number) => void;
+
   clearLocalData: () => void;
 }
 
@@ -47,12 +52,24 @@ export const useMoodStore = create<MoodState>()(
       
       isSyncing: false,
 
+      // Report Logic
+      reports: {},
+      saveReport: (year, week, content) => set((state) => ({
+        reports: { ...state.reports, [`${year}-${week}`]: content }
+      })),
+      deleteReport: (year, week) => set((state) => {
+        const newReports = { ...state.reports };
+        delete newReports[`${year}-${week}`];
+        return { reports: newReports };
+      }),
+
       clearLocalData: () => set({
         currentScore: 50,
         todayBaseline: null,
         lastVisitDate: null,
         records: [],
-        isSyncing: false
+        isSyncing: false,
+        reports: {}
       }),
 
       syncFromCloud: async () => {
