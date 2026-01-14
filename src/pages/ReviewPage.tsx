@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { RecordEditModal } from '../components/RecordEditModal';
 import { MoodRecord } from '../types';
 import { getQuarterWeeks, QuarterInfo, WeekInfo } from '../utils/dateUtils';
+import { AIReportCard } from '../components/AIReportCard';
 
 export const ReviewPage = () => {
   const navigate = useNavigate();
@@ -311,6 +312,15 @@ export const ReviewPage = () => {
                 </motion.div>
               )}
             </AnimatePresence>
+
+            {/* AI Analysis Card */}
+            {selectedWeek && weeklyRecords.length > 0 && (
+              <AIReportCard 
+                moodScores={weeklyRecords.map(r => r.score)} 
+                notes={weeklyRecords.map(r => r.note || '')}
+                weekNumber={selectedWeek.weekNumber}
+              />
+            )}
 
             {weeklyRecords.length === 0 ? (
               <div className="text-center py-12 text-slate-400 font-light bg-white rounded-2xl border border-slate-100 border-dashed">
