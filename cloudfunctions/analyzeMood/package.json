@@ -1,0 +1,9 @@
+{
+  "name": "analyzeMood",
+  "version": "1.0.0",
+  "description": "DeepSeek Mood Analyzer Cloud Function",
+  "main": "index.js",
+  "dependencies": {
+    "axios": "^1.6.0"
+  }
+}

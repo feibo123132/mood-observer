@@ -3,7 +3,6 @@ export interface MoodRecord {
   timestamp: number;
   score: number; // 0-100
   note: string;
-  deletedAt?: number; // timestamp when deleted
 }
 
 export interface DailySummary {

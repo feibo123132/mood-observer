@@ -159,15 +159,13 @@ export const HomePage = () => {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col items-center w-full max-w-md z-10">
-        <div className="flex-1 flex items-center justify-center w-full">
-          <MoodSphere score={currentScore} size={320} />
-        </div>
-        
-        <div className="flex flex-col items-center gap-12 pb-24">
-           <button 
-             onClick={() => {
-               setRecordScore(currentScore);
+          <div className="flex-1 flex flex-col items-center justify-center w-full max-w-md z-10 min-h-[60vh]">
+            <MoodSphere score={currentScore} size={320} />
+            
+            <div className="flex flex-col items-center gap-12 mt-24">
+               <button 
+                 onClick={() => {
+                   setRecordScore(currentScore);
                setIsRecording(true);
              }}
              className="flex items-center gap-2 px-6 py-3 bg-white/80 backdrop-blur-md shadow-lg rounded-full text-slate-700 font-medium hover:bg-white transition-all transform hover:scale-105"
