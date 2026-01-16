@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+// Force refresh
 import { ArrowLeft, Clock, ChevronDown, ChevronLeft, ChevronRight, FileText } from 'lucide-react';
 import { useMoodStore } from '../store/useMoodStore';
 import { useMoodStats, SortType } from '../hooks/useMoodStats';
@@ -13,7 +14,8 @@ import { AIReportCard } from '../components/AIReportCard';
 
 export const ReviewPage = () => {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'overall' | 'weekly'>('overall');
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState<'overall' | 'weekly'>(() => (location.state as any)?.activeTab || 'overall');
   const [sortBy, setSortBy] = useState<SortType>('score_desc');
   const [editingRecord, setEditingRecord] = useState<MoodRecord | null>(null);
 

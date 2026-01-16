@@ -34,7 +34,7 @@ export const HistoryReportsPage = () => {
     <div className="min-h-screen bg-slate-50 flex flex-col items-center">
       {/* Header */}
       <div className="w-full max-w-md p-6 flex items-center justify-between sticky top-0 bg-slate-50 z-10">
-        <button onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-slate-100 text-slate-600 transition-colors">
+        <button onClick={() => navigate('/review', { state: { activeTab: 'weekly' } })} className="p-2 -ml-2 rounded-full hover:bg-slate-100 text-slate-600 transition-colors">
           <ArrowLeft size={24} />
         </button>
         <span className="text-lg font-medium text-slate-800">历史情绪报告</span>
