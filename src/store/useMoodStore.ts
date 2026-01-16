@@ -18,7 +18,7 @@ interface MoodState {
   restoreRecord: (id: string) => Promise<void>;
   permanentDeleteRecord: (id: string) => Promise<void>;
   cleanupTrash: () => void;
-  updateRecord: (id: string, newNote: string) => Promise<void>;
+  updateRecord: (id: string, updates: { note?: string; score?: number }) => Promise<void>;
   
   resetDaily: () => void;
   
@@ -288,11 +288,11 @@ export const useMoodStore = create<MoodState>()(
         });
       },
 
-      updateRecord: async (id, newNote) => {
+      updateRecord: async (id, updates) => {
         // 1. 乐观更新本地
         set((state) => ({
           records: state.records.map((r) => 
-            r.id === id ? { ...r, note: newNote } : r
+            r.id === id ? { ...r, ...updates } : r
           )
         }));
 
@@ -304,9 +304,7 @@ export const useMoodStore = create<MoodState>()(
             // 所以先查询拿到 docId，再更新，或者使用 where().update()
             await db.collection('mood_records')
               .where({ id, userId: currentEmail })
-              .update({
-                note: newNote
-              });
+              .update(updates);
           } catch (err) {
             console.error('Update cloud record failed:', err);
           }

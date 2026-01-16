@@ -4,6 +4,7 @@ import { CalendarPage } from './pages/CalendarPage';
 import { LoginPage } from './pages/LoginPage';
 import { ReviewPage } from './pages/ReviewPage';
 import { TrashPage } from './pages/TrashPage';
+import { HistoryReportsPage } from './pages/HistoryReportsPage';
 import { RequireAuth } from './components/RequireAuth';
 import { useEffect } from 'react';
 import { useAuthStore } from './store/useAuthStore';
@@ -53,6 +54,11 @@ function App() {
         <Route path="/trash" element={
           <RequireAuth>
             <TrashPage />
+          </RequireAuth>
+        } />
+        <Route path="/reports" element={
+          <RequireAuth>
+            <HistoryReportsPage />
           </RequireAuth>
         } />
         <Route path="/login" element={<LoginPage />} />

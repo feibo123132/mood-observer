@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Clock, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Clock, ChevronDown, ChevronLeft, ChevronRight, FileText } from 'lucide-react';
+import { useMoodStore } from '../store/useMoodStore';
 import { useMoodStats, SortType } from '../hooks/useMoodStats';
 import { format, getYear } from 'date-fns';
 import { getMoodState } from '../utils/moodUtils';
@@ -28,6 +29,7 @@ export const ReviewPage = () => {
   
   // Collapse State for Week Selector
   const [isWeekSelectorOpen, setIsWeekSelectorOpen] = useState(false);
+  // Removed unused reports and hasReports variables since icon is always shown
 
   // Initialize quarters when year changes
   useEffect(() => {
@@ -227,6 +229,13 @@ export const ReviewPage = () => {
               </button>
               
               <div className="flex gap-2">
+                <button 
+                  onClick={() => navigate('/reports')}
+                  className="p-1.5 rounded-lg text-indigo-500 hover:bg-indigo-50 transition-colors"
+                  title="查看已保存的情绪报告"
+                >
+                  <FileText size={16} />
+                </button>
                 <button 
                   onClick={() => setSortBy('time')}
                   className={`p-1.5 rounded-lg transition-colors ${sortBy === 'time' ? 'bg-slate-200 text-slate-800' : 'text-slate-400 hover:bg-slate-100'}`}

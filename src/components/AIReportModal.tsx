@@ -10,12 +10,13 @@ interface AIReportModalProps {
   notes: string[];
   weekNumber: number;
   year: number;
+  customPrompt?: string;
   onClose: () => void;
 }
 
 type AnalysisStatus = 'idle' | 'loading' | 'streaming' | 'done' | 'error' | 'view';
 
-export const AIReportModal = ({ moodScores, notes, weekNumber, year, onClose }: AIReportModalProps) => {
+export const AIReportModal = ({ moodScores, notes, weekNumber, year, customPrompt, onClose }: AIReportModalProps) => {
   const { saveReport, deleteReport, reports } = useMoodStore();
   const reportKey = `${year}-${weekNumber}`;
   const savedReport = reports[reportKey];
@@ -84,7 +85,7 @@ export const AIReportModal = ({ moodScores, notes, weekNumber, year, onClose }: 
       console.log('Calling analyzeMood...');
       const res = await app.callFunction({
         name: 'analyzeMood',
-        data: { moodScores, notes }
+        data: { moodScores, notes, customPrompt }
       });
 
       if (res.result && res.result.success) {

@@ -13,17 +13,19 @@ interface RecordEditModalProps {
 
 export const RecordEditModal = ({ record, onClose }: RecordEditModalProps) => {
   const [note, setNote] = useState('');
+  const [score, setScore] = useState(50);
   const { updateRecord, deleteRecord } = useMoodStore();
 
   useEffect(() => {
     if (record) {
       setNote(record.note || '');
+      setScore(record.score);
     }
   }, [record]);
 
   const handleSave = async () => {
     if (record) {
-      await updateRecord(record.id, note);
+      await updateRecord(record.id, { note, score });
       onClose();
     }
   };
@@ -37,7 +39,8 @@ export const RecordEditModal = ({ record, onClose }: RecordEditModalProps) => {
 
   if (!record) return null;
 
-  const moodState = getMoodState(record.score);
+  // Use current dynamic score for preview
+  const moodState = getMoodState(score);
   const date = new Date(record.timestamp);
 
   return (
@@ -61,7 +64,7 @@ export const RecordEditModal = ({ record, onClose }: RecordEditModalProps) => {
         >
           {/* Header with Color */}
           <div 
-            className="h-24 w-full relative flex items-center justify-center"
+            className="h-28 w-full relative flex flex-col items-center justify-center transition-colors duration-300"
             style={{ background: `linear-gradient(to bottom right, ${moodState.color}22, ${moodState.color}44)` }}
           >
             <button 
@@ -73,10 +76,10 @@ export const RecordEditModal = ({ record, onClose }: RecordEditModalProps) => {
             
             <div className="text-center">
               <div 
-                className="text-3xl font-bold mb-1"
+                className="text-4xl font-bold mb-1 transition-colors duration-300"
                 style={{ color: moodState.color }}
               >
-                {record.score}
+                {score}
               </div>
               <div className="text-sm font-medium text-slate-600 opacity-80">
                 {moodState.label}
@@ -106,8 +109,27 @@ export const RecordEditModal = ({ record, onClose }: RecordEditModalProps) => {
               <textarea
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
-                className="w-full h-32 p-3 bg-slate-50 border border-slate-100 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-slate-200 text-slate-700 text-sm leading-relaxed"
+                className="w-full h-24 p-3 bg-slate-50 border border-slate-100 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-slate-200 text-slate-700 text-sm leading-relaxed"
                 placeholder="写点什么..."
+              />
+            </div>
+
+            {/* Score Slider */}
+            <div className="space-y-2">
+              <div className="flex justify-between items-center text-xs font-bold text-slate-400 uppercase tracking-wider">
+                <span>调整分数</span>
+                <span>{score}</span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={score}
+                onChange={(e) => setScore(Number(e.target.value))}
+                className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                style={{
+                  background: `linear-gradient(to right, ${moodState.color} 0%, ${moodState.color} ${score}%, #e2e8f0 ${score}%, #e2e8f0 100%)`
+                }}
               />
             </div>
 
