@@ -7,7 +7,9 @@ export const ENV_ID = 'jieyou-3gr01mvob9ad92de';
 
 export const app = cloudbase.init({
   env: ENV_ID,
-  region: 'ap-shanghai' // 默认为上海，如果是其他区域请修改
+  region: 'ap-shanghai', // 默认为上海，如果是其他区域请修改
+  // @ts-ignore
+  timeout: 60000 // 设置全局超时为 60s
 });
 
 export const auth = app.auth({

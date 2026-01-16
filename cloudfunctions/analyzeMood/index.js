@@ -6,12 +6,13 @@ const axios = require('axios');
  * @param {Object} event
  * @param {number[]} event.moodScores - 一周的情绪分数数组，如 [80, 90, 50, ...]
  * @param {string[]} event.notes - 一周的用户笔记数组
+ * @param {string} [event.customPrompt] - 用户自定义的 Prompt（可选）
  * @param {Object} context
  */
 exports.main = async (event, context) => {
   console.log('Function analyzeMood invoked with:', JSON.stringify(event));
 
-  const { moodScores, notes } = event;
+  const { moodScores, notes, customPrompt } = event;
 
   // 1. 参数校验
   if (!moodScores || !Array.isArray(moodScores) || moodScores.length === 0) {
@@ -36,7 +37,25 @@ exports.main = async (event, context) => {
   }
 
   // 3. 构建 Prompt
-  const prompt = `
+  let prompt;
+  let systemContent = "你是专业的心理咨询师，擅长认知行为疗法(CBT)和共情沟通。"; // 默认 System Prompt
+  
+  if (customPrompt && customPrompt.trim()) {
+    // 使用用户自定义 Prompt
+    console.log('Using custom prompt:', customPrompt);
+    // 在自定义模式下，移除默认的心理咨询师人设，改用更中性的助手设定
+    systemContent = "你是一个智能数据分析助手，请严格遵循用户的指令进行分析。";
+
+    prompt = `
+${customPrompt}
+
+【本周情绪数据】
+- 情绪分数趋势（0-100分，分数越高代表心情越好）：${moodScores.join(', ')}
+- 用户日记关键词/片段：${safeNotes.join('; ')}
+`;
+  } else {
+    // 使用默认心理咨询师 Prompt
+    prompt = `
 你是一位温暖、包容且专业的心理咨询师。请根据以下用户本周的情绪数据和日记，生成一份简明扼要的情绪周报（约300字）。
 
 【数据概览】
@@ -50,6 +69,7 @@ exports.main = async (event, context) => {
 4. **结语**：给予一句充满希望的鼓励。
 5. 格式清晰，分段输出，不要使用Markdown标题语法（#），直接使用文本段落。
 `;
+  }
 
   try {
     console.log('Calling DeepSeek API...');
@@ -60,7 +80,7 @@ exports.main = async (event, context) => {
       {
         model: "deepseek-chat",
         messages: [
-          { role: "system", content: "你是专业的心理咨询师，擅长认知行为疗法(CBT)和共情沟通。" },
+          { role: "system", content: systemContent },
           { role: "user", content: prompt }
         ],
         temperature: 0.7, // 稍微增加一点创造性

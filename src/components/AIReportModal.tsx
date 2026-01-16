@@ -83,10 +83,11 @@ export const AIReportModal = ({ moodScores, notes, weekNumber, year, customPromp
       }
 
       console.log('Calling analyzeMood...');
+      // @ts-ignore - Some SDK versions support timeout in options
       const res = await app.callFunction({
         name: 'analyzeMood',
         data: { moodScores, notes, customPrompt }
-      });
+      }, { timeout: 60000 });
 
       if (res.result && res.result.success) {
         setFullReport(res.result.report);
@@ -155,7 +156,7 @@ export const AIReportModal = ({ moodScores, notes, weekNumber, year, customPromp
               <div className="space-y-4 animate-pulse">
                 <div className="flex items-center gap-2 text-indigo-600 mb-6">
                   <RefreshCw size={16} className="animate-spin" />
-                  <span className="text-sm font-medium">AI 正在阅读您的日记...</span>
+                  <span className="text-sm font-medium">AI 正在深度思考中（大约需要 60 秒）...</span>
                 </div>
                 <div className="h-4 bg-slate-100 rounded w-3/4"></div>
                 <div className="h-4 bg-slate-100 rounded w-full"></div>
