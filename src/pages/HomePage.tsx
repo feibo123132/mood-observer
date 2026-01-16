@@ -149,7 +149,7 @@ export const HomePage = () => {
         </div>
         
         <div className="flex flex-col items-center">
-          <span className="text-sm font-medium text-slate-400 tracking-widest uppercase">情绪观察员</span>
+          <span className="text-sm font-medium text-slate-400 tracking-widest uppercase">JIEYOU不解忧</span>
           {!user && (
             <span className="text-[10px] text-red-400 font-light mt-0.5 animate-pulse">未登录 (数据仅本地保存)</span>
           )}

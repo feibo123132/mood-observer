@@ -148,7 +148,7 @@ export const AIReportCard = ({ moodScores, notes, weekNumber, year }: AIReportCa
                       className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-slate-50 transition-colors"
                     >
                       <div className="flex items-center gap-2">
-                        <Settings size={16} />
+                        <Sparkles size={16} />
                         <span className="font-medium">情绪魔法师JIEYOU</span>
                       </div>
                     </button>

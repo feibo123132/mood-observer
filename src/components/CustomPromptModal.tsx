@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Sparkles, Wand2 } from 'lucide-react';
+import { X, Sparkles } from 'lucide-react';
 
 interface CustomPromptModalProps {
   isOpen: boolean;
@@ -47,7 +47,7 @@ export const CustomPromptModal = ({ isOpen, onClose, onConfirm }: CustomPromptMo
               
               <div className="relative z-10 flex items-center gap-3 mb-1">
                 <div className="p-2 bg-white/20 backdrop-blur-sm rounded-lg">
-                  <Wand2 size={20} />
+                  <Sparkles size={20} />
                 </div>
                 <h3 className="text-xl font-bold">情绪魔法师JIEYOU</h3>
               </div>
