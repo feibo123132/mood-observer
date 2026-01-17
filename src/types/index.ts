@@ -1,8 +1,9 @@
 export interface MoodRecord {
   id: string;
   timestamp: number;
-  score: number; // 0-100
+  score: number; // 0-100. For harvest: 0, 25, 50, 75, 100
   note: string;
+  type?: 'mood' | 'harvest';
 }
 
 export interface DailySummary {

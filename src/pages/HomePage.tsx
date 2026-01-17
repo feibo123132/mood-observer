@@ -5,10 +5,11 @@ import { MoodSlider } from '../components/MoodSlider';
 import { useMoodStore } from '../store/useMoodStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { useSettingsStore, AudioMode } from '../store/useSettingsStore';
-import { PenLine, X, Check, User } from 'lucide-react';
+import { PenLine, X, Check, User, RefreshCw, Box, Trees, Map } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { UserMenu } from '../components/UserMenu';
 import { audioPlayer } from '../services/AudioPlayer';
+import { getHarvestLevel, snapHarvestScore } from '../utils/harvestUtils';
 
 export const HomePage = () => {
   const { 
@@ -25,6 +26,7 @@ export const HomePage = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [recordNote, setRecordNote] = useState('');
   const [recordScore, setRecordScore] = useState(currentScore);
+  const [recordType, setRecordType] = useState<'mood' | 'harvest'>('mood');
 
   // Initialize auth on mount
   useEffect(() => {
@@ -83,15 +85,28 @@ export const HomePage = () => {
   const handleSaveRecord = () => {
     addRecord({
       score: recordScore,
-      note: recordNote || '记录当下'
+      note: recordNote || (recordType === 'harvest' ? '收获记录' : '记录当下'),
+      type: recordType
     });
-    setCurrentScore(recordScore);
+    
+    if (recordType === 'mood') {
+        setCurrentScore(recordScore);
+    }
     
     // Trigger sound
     audioPlayer.play(recordScore);
 
     setIsRecording(false);
     setRecordNote('');
+    // Reset type to mood for next time, or keep it? User didn't specify. Keeping it 'mood' is safer or maybe preserve state.
+    // Let's reset to default to avoid confusion
+    setRecordType('mood'); 
+  };
+
+  const toggleRecordType = () => {
+    const newType = recordType === 'mood' ? 'harvest' : 'mood';
+    setRecordType(newType);
+    setRecordScore(50); // Reset score to middle as requested
   };
 
   // If Wake Up mode
@@ -166,7 +181,8 @@ export const HomePage = () => {
                <button 
                  onClick={() => {
                    setRecordScore(currentScore);
-               setIsRecording(true);
+                   setRecordType('mood'); // Default to mood
+                   setIsRecording(true);
              }}
              className="flex items-center gap-2 px-6 py-3 bg-white/80 backdrop-blur-md shadow-lg rounded-full text-slate-700 font-medium hover:bg-white transition-all transform hover:scale-105"
            >
@@ -196,21 +212,143 @@ export const HomePage = () => {
               <button onClick={() => setIsRecording(false)} className="p-2 rounded-full hover:bg-slate-100">
                 <X size={24} className="text-slate-500" />
               </button>
-              <span className="font-medium text-slate-800">记录此刻</span>
+              
+              <div className="flex items-center gap-2">
+                 <span className="font-medium text-slate-800 flex items-center gap-2">
+                    {recordType === 'mood' ? (
+                      <>
+                        <Trees size={18} className="text-green-600" />
+                        情绪之森
+                      </>
+                    ) : (
+                      <>
+                        <Map size={18} className="text-amber-500" />
+                        宝箱之旅
+                      </>
+                    )}
+                 </span>
+                 <button 
+                   onClick={toggleRecordType}
+                   className="p-1.5 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 transition-colors"
+                   title="切换模式"
+                 >
+                   {recordType === 'mood' ? <Box size={14} /> : <RefreshCw size={14} />}
+                 </button>
+              </div>
+
               <button onClick={handleSaveRecord} className="p-2 rounded-full bg-slate-900 text-white hover:bg-slate-800 shadow-md">
                 <Check size={20} />
               </button>
             </div>
             
             <div className="flex-1 flex flex-col items-center justify-center p-6 gap-8 overflow-y-auto">
-              <MoodSphere score={recordScore} size={180} />
-              <MoodSlider value={recordScore} onChange={setRecordScore} />
+              
+              {recordType === 'mood' ? (
+                 /* Mood Mode */
+                 <>
+                    <MoodSphere score={recordScore} size={180} />
+                    <MoodSlider value={recordScore} onChange={setRecordScore} />
+                 </>
+              ) : (
+                 /* Harvest Mode */
+                 (() => {
+                    const level = getHarvestLevel(recordScore);
+                    return (
+                        <>
+                           {/* Solid Sphere with improved style matching MoodSphere */}
+                           <div className="relative flex items-center justify-center" style={{ width: 180, height: 180 }}>
+                             {/* Always show sphere with visual effects, even for Common level (grey) */}
+                             <>
+                                 {/* Glow effect */}
+                                 <motion.div
+                                   className="absolute inset-0 rounded-full blur-3xl opacity-40"
+                                   animate={{
+                                     scale: [1, 1.2, 1],
+                                     opacity: [0.3, 0.5, 0.3],
+                                   }}
+                                   transition={{
+                                     duration: 3, // Consistent moderate breathing
+                                     repeat: Infinity,
+                                     ease: "easeInOut"
+                                   }}
+                                   style={{ background: level.color }}
+                                 />
+                                 
+                                 {/* Core Sphere */}
+                                 <motion.div
+                                   className="w-full h-full rounded-full relative z-10"
+                                   animate={{
+                                     scale: [0.95, 1.05, 0.95],
+                                   }}
+                                   transition={{
+                                     duration: 3,
+                                     repeat: Infinity,
+                                     ease: "easeInOut"
+                                   }}
+                                   style={{
+                                     background: `radial-gradient(circle at 30% 30%, rgba(255,255,255,0.8), ${level.color})`,
+                                     boxShadow: `0 0 60px ${level.color}`,
+                                   }}
+                                 />
+                             </>
+                           </div>
+ 
+                           {/* Level Text Info */}
+                           <div className="text-center space-y-2">
+                              <h3 className="text-2xl font-bold" style={{ color: level.color }}>
+                                {level.label}
+                              </h3>
+                              <p className="text-sm text-slate-500">{level.description}</p>
+                           </div>
+
+                           {/* Continuous Slider with Colored Segments */}
+                           <div className="w-full max-w-md h-2 bg-slate-100 rounded-full relative">
+                              {/* Track Background - Colored Segments */}
+                              <div className="absolute inset-0 rounded-full overflow-hidden flex">
+                                 {/* Common: 0-19 (20%) */}
+                                 <div className="h-full bg-gray-400" style={{ width: '20%' }} />
+                                 {/* Fine: 20-39 (20%) */}
+                                 <div className="h-full bg-green-500" style={{ width: '20%' }} />
+                                 {/* Rare: 40-59 (20%) */}
+                                 <div className="h-full bg-blue-500" style={{ width: '20%' }} />
+                                 {/* Epic: 60-79 (20%) */}
+                                 <div className="h-full bg-purple-500" style={{ width: '20%' }} />
+                                 {/* Legendary: 80-100 (20%) */}
+                                 <div className="h-full bg-yellow-500" style={{ width: '20%' }} />
+                              </div>
+
+                              {/* Thumb */}
+                              <div 
+                                className="absolute top-1/2 -translate-y-1/2 w-7 h-7 bg-white rounded-full shadow-md border-4 transition-all duration-75 pointer-events-none z-20"
+                                style={{ 
+                                    left: `${recordScore}%`, 
+                                    transform: `translate(-50%, -50%)`,
+                                    borderColor: level.color
+                                }}
+                              />
+
+                              {/* Input Range */}
+                              <input
+                                type="range"
+                                min="0"
+                                max="100"
+                                step="1"
+                                value={recordScore}
+                                onChange={(e) => setRecordScore(Number(e.target.value))}
+                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-30"
+                              />
+                           </div>
+                        </>
+                    );
+                 })()
+              )}
+
               
               <div className="w-full max-w-md mt-4">
                 <textarea
                   value={recordNote}
                   onChange={(e) => setRecordNote(e.target.value)}
-                  placeholder="今天的旅途中，你又遇到了哪些想要记录的事或情绪？(可选)"
+                  placeholder={recordType === 'mood' ? "今天的旅途，你又遇到了哪些想要记录的事或情绪？(可选)" : "今天的旅途，你又收获了哪些值得记录的宝箱？（可选）"}
                   maxLength={100}
                   className="w-full p-4 bg-slate-50 rounded-2xl resize-none focus:outline-none focus:ring-2 focus:ring-slate-200 text-slate-700 placeholder:text-slate-400 text-center"
                   rows={3}
