@@ -3,7 +3,8 @@ import { useMoodStore } from '../store/useMoodStore';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, getDay } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import { getMoodState } from '../utils/moodUtils';
-import { ArrowLeft, CheckSquare, Trash2, Square } from 'lucide-react';
+import { getHarvestLevel } from '../utils/harvestUtils';
+import { ArrowLeft, CheckSquare, Trash2, Square, ChevronDown, ChevronRight, Trees, Map } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RecordEditModal } from '../components/RecordEditModal';
@@ -19,6 +20,19 @@ export const CalendarPage = () => {
   // Selection Mode State
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // Collapsible sections state
+  const [expandedSections, setExpandedSections] = useState({
+    mood: true,
+    harvest: true
+  });
+
+  const toggleSection = (type: 'mood' | 'harvest') => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [type]: !prev[type]
+    }));
+  };
 
   // Aggregate daily stats
   const dailyStats = useMemo(() => {
@@ -56,6 +70,21 @@ export const CalendarPage = () => {
       .filter(r => isSameDay(new Date(r.timestamp), selectedDate))
       .sort((a, b) => b.timestamp - a.timestamp); // Newest first
   }, [selectedDate, records]);
+
+  const groupedRecords = useMemo(() => {
+    const groups = {
+      mood: [] as MoodRecord[],
+      harvest: [] as MoodRecord[]
+    };
+    selectedRecords.forEach(record => {
+      if (record.type === 'harvest') {
+        groups.harvest.push(record);
+      } else {
+        groups.mood.push(record); // 'mood' or undefined defaults to mood
+      }
+    });
+    return groups;
+  }, [selectedRecords]);
 
   const toggleSelection = (id: string) => {
     const newSet = new Set(selectedIds);
@@ -165,74 +194,203 @@ export const CalendarPage = () => {
                 今日暂无记录。
               </div>
             ) : (
-              selectedRecords.map(record => (
-                <div key={record.id} className="flex gap-4 items-center relative pl-4 border-l-2 border-slate-100 last:border-transparent">
-                  {/* Checkbox for Selection Mode */}
-                  <AnimatePresence initial={false}>
-                    {isSelectionMode && (
-                      <motion.div
-                        initial={{ width: 0, opacity: 0, marginRight: 0 }}
-                        animate={{ width: 'auto', opacity: 1, marginRight: 8 }}
-                        exit={{ width: 0, opacity: 0, marginRight: 0 }}
-                        className="overflow-hidden"
-                      >
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleSelection(record.id);
-                          }}
-                          className="p-1"
+              <div className="space-y-6">
+                {/* Mood Section - 情绪之森 */}
+                {groupedRecords.mood.length > 0 && (
+                  <div className="space-y-2">
+                    <button 
+                      onClick={() => toggleSection('mood')}
+                      className="flex items-center gap-2 text-slate-800 font-medium w-full hover:bg-slate-100 p-2 rounded-lg transition-colors"
+                    >
+                      {expandedSections.mood ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+                      <Trees size={18} className="text-green-600" />
+                      <span>情绪之森</span>
+                      <span className="text-xs text-slate-400 font-normal ml-auto">{groupedRecords.mood.length}</span>
+                    </button>
+                    
+                    <AnimatePresence>
+                      {expandedSections.mood && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          className="space-y-3 overflow-hidden"
                         >
-                          {selectedIds.has(record.id) ? (
-                            <CheckSquare size={20} className="text-slate-800" />
-                          ) : (
-                            <Square size={20} className="text-slate-300" />
-                          )}
-                        </button>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                          {groupedRecords.mood.map(record => {
+                            const moodState = getMoodState(record.score);
+                            return (
+                              <div key={record.id} className="flex gap-4 items-center relative pl-4 border-l-2 border-slate-100 last:border-transparent">
+                                {/* Checkbox for Selection Mode */}
+                                <AnimatePresence initial={false}>
+                                  {isSelectionMode && (
+                                    <motion.div
+                                      initial={{ width: 0, opacity: 0, marginRight: 0 }}
+                                      animate={{ width: 'auto', opacity: 1, marginRight: 8 }}
+                                      exit={{ width: 0, opacity: 0, marginRight: 0 }}
+                                      className="overflow-hidden"
+                                    >
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          toggleSelection(record.id);
+                                        }}
+                                        className="p-1"
+                                      >
+                                        {selectedIds.has(record.id) ? (
+                                          <CheckSquare size={20} className="text-slate-800" />
+                                        ) : (
+                                          <Square size={20} className="text-slate-300" />
+                                        )}
+                                      </button>
+                                    </motion.div>
+                                  )}
+                                </AnimatePresence>
 
-                  <div 
-                    className="absolute -left-[5px] top-1.5 w-2.5 h-2.5 rounded-full border border-white shadow-sm ring-2 ring-slate-50"
-                    style={{ background: getMoodState(record.score).color }}
-                  />
-                  <div 
-                    onClick={() => {
-                      if (isSelectionMode) {
-                        toggleSelection(record.id);
-                      } else {
-                        setEditingRecord(record);
-                      }
-                    }}
-                    className={`flex-1 bg-white p-4 rounded-xl shadow-sm border transition-all group cursor-pointer ${
-                      isSelectionMode && selectedIds.has(record.id) 
-                        ? 'border-slate-400 ring-1 ring-slate-400' 
-                        : 'border-slate-100 hover:shadow-md'
-                    }`}
-                  >
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-xs text-slate-400 font-mono">
-                        {format(new Date(record.timestamp), 'HH:mm')}
-                      </span>
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs font-bold text-slate-300 uppercase">
-                          {getMoodState(record.score).label}
-                        </span>
-                        <span 
-                          className="text-xs font-bold px-2 py-0.5 rounded-full text-white"
-                          style={{ backgroundColor: getMoodState(record.score).color }}
-                        >
-                          {record.score}
-                        </span>
-                      </div>
-                    </div>
-                    <p className="text-slate-700 text-sm leading-relaxed">
-                      {record.note}
-                    </p>
+                                <div 
+                                  className="absolute -left-[5px] top-1.5 w-2.5 h-2.5 rounded-full border border-white shadow-sm ring-2 ring-slate-50"
+                                  style={{ background: moodState.color }}
+                                />
+                                <div 
+                                  onClick={() => {
+                                    if (isSelectionMode) {
+                                      toggleSelection(record.id);
+                                    } else {
+                                      setEditingRecord(record);
+                                    }
+                                  }}
+                                  className={`flex-1 bg-white p-4 rounded-xl shadow-sm border transition-all group cursor-pointer ${
+                                    isSelectionMode && selectedIds.has(record.id) 
+                                      ? 'border-slate-400 ring-1 ring-slate-400' 
+                                      : 'border-slate-100 hover:shadow-md'
+                                  }`}
+                                >
+                                  <div className="flex justify-between items-center mb-2">
+                                    <span className="text-xs text-slate-400 font-mono">
+                                      {format(new Date(record.timestamp), 'HH:mm')}
+                                    </span>
+                                    <div className="flex items-center gap-3">
+                                      <span className="text-xs font-bold text-slate-300 uppercase">
+                                        {moodState.label}
+                                      </span>
+                                      <span 
+                                        className="text-xs font-bold px-2 py-0.5 rounded-full text-white"
+                                        style={{ backgroundColor: moodState.color }}
+                                      >
+                                        {record.score}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <p className="text-slate-700 text-sm leading-relaxed">
+                                    {record.note}
+                                  </p>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
-                </div>
-              ))
+                )}
+
+                {/* Harvest Section - 宝藏之旅 */}
+                {groupedRecords.harvest.length > 0 && (
+                  <div className="space-y-2">
+                    <button 
+                      onClick={() => toggleSection('harvest')}
+                      className="flex items-center gap-2 text-slate-800 font-medium w-full hover:bg-slate-100 p-2 rounded-lg transition-colors"
+                    >
+                      {expandedSections.harvest ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+                      <Map size={18} className="text-amber-500" />
+                      <span>宝藏之旅</span>
+                      <span className="text-xs text-slate-400 font-normal ml-auto">{groupedRecords.harvest.length}</span>
+                    </button>
+                    
+                    <AnimatePresence>
+                      {expandedSections.harvest && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          className="space-y-3 overflow-hidden"
+                        >
+                          {groupedRecords.harvest.map(record => {
+                            const level = getHarvestLevel(record.score);
+                            return (
+                              <div key={record.id} className="flex gap-4 items-center relative pl-4 border-l-2 border-slate-100 last:border-transparent">
+                                {/* Checkbox for Selection Mode */}
+                                <AnimatePresence initial={false}>
+                                  {isSelectionMode && (
+                                    <motion.div
+                                      initial={{ width: 0, opacity: 0, marginRight: 0 }}
+                                      animate={{ width: 'auto', opacity: 1, marginRight: 8 }}
+                                      exit={{ width: 0, opacity: 0, marginRight: 0 }}
+                                      className="overflow-hidden"
+                                    >
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          toggleSelection(record.id);
+                                        }}
+                                        className="p-1"
+                                      >
+                                        {selectedIds.has(record.id) ? (
+                                          <CheckSquare size={20} className="text-slate-800" />
+                                        ) : (
+                                          <Square size={20} className="text-slate-300" />
+                                        )}
+                                      </button>
+                                    </motion.div>
+                                  )}
+                                </AnimatePresence>
+
+                                <div 
+                                  className="absolute -left-[5px] top-1.5 w-2.5 h-2.5 rounded-full border border-white shadow-sm ring-2 ring-slate-50"
+                                  style={{ background: level.color }}
+                                />
+                                <div 
+                                  onClick={() => {
+                                    if (isSelectionMode) {
+                                      toggleSelection(record.id);
+                                    } else {
+                                      setEditingRecord(record);
+                                    }
+                                  }}
+                                  className={`flex-1 bg-white p-4 rounded-xl shadow-sm border transition-all group cursor-pointer ${
+                                    isSelectionMode && selectedIds.has(record.id) 
+                                      ? 'border-slate-400 ring-1 ring-slate-400' 
+                                      : 'border-slate-100 hover:shadow-md'
+                                  }`}
+                                >
+                                  <div className="flex justify-between items-center mb-2">
+                                    <span className="text-xs text-slate-400 font-mono">
+                                      {format(new Date(record.timestamp), 'HH:mm')}
+                                    </span>
+                                    <div className="flex items-center gap-3">
+                                      <span className="text-xs font-bold text-slate-300 uppercase">
+                                        {level.label}
+                                      </span>
+                                      <span 
+                                        className="text-xs font-bold px-2 py-0.5 rounded-full text-white"
+                                        style={{ backgroundColor: level.color }}
+                                      >
+                                        {record.score}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <p className="text-slate-700 text-sm leading-relaxed">
+                                    {record.note}
+                                  </p>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                )}
+              </div>
             )}
           </motion.div>
         )}

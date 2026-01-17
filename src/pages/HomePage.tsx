@@ -24,7 +24,8 @@ export const HomePage = () => {
   
   const navigate = useNavigate();
   const [isRecording, setIsRecording] = useState(false);
-  const [recordNote, setRecordNote] = useState('');
+  const [moodNote, setMoodNote] = useState('');
+  const [harvestNote, setHarvestNote] = useState('');
   const [recordScore, setRecordScore] = useState(currentScore);
   const [recordType, setRecordType] = useState<'mood' | 'harvest'>('mood');
 
@@ -85,7 +86,7 @@ export const HomePage = () => {
   const handleSaveRecord = () => {
     addRecord({
       score: recordScore,
-      note: recordNote || (recordType === 'harvest' ? '收获记录' : '记录当下'),
+      note: (recordType === 'mood' ? moodNote : harvestNote) || (recordType === 'harvest' ? '收获记录' : '记录当下'),
       type: recordType
     });
     
@@ -97,7 +98,8 @@ export const HomePage = () => {
     audioPlayer.play(recordScore);
 
     setIsRecording(false);
-    setRecordNote('');
+    setMoodNote('');
+    setHarvestNote('');
     // Reset type to mood for next time, or keep it? User didn't specify. Keeping it 'mood' is safer or maybe preserve state.
     // Let's reset to default to avoid confusion
     setRecordType('mood'); 
@@ -305,16 +307,16 @@ export const HomePage = () => {
                            <div className="w-full max-w-md h-2 bg-slate-100 rounded-full relative">
                               {/* Track Background - Colored Segments */}
                               <div className="absolute inset-0 rounded-full overflow-hidden flex">
-                                 {/* Common: 0-19 (20%) */}
-                                 <div className="h-full bg-gray-400" style={{ width: '20%' }} />
-                                 {/* Fine: 20-39 (20%) */}
-                                 <div className="h-full bg-green-500" style={{ width: '20%' }} />
-                                 {/* Rare: 40-59 (20%) */}
-                                 <div className="h-full bg-blue-500" style={{ width: '20%' }} />
-                                 {/* Epic: 60-79 (20%) */}
-                                 <div className="h-full bg-purple-500" style={{ width: '20%' }} />
-                                 {/* Legendary: 80-100 (20%) */}
-                                 <div className="h-full bg-yellow-500" style={{ width: '20%' }} />
+                                 {/* Common: 0-69 (70%) */}
+                                 <div className="h-full bg-gray-400" style={{ width: '70%' }} />
+                                 {/* Fine: 70-79 (10%) */}
+                                 <div className="h-full bg-green-500" style={{ width: '10%' }} />
+                                 {/* Rare: 80-89 (10%) */}
+                                 <div className="h-full bg-blue-500" style={{ width: '10%' }} />
+                                 {/* Epic: 90-95 (6%) */}
+                                 <div className="h-full bg-purple-500" style={{ width: '6%' }} />
+                                 {/* Legendary: 96-100 (4%) */}
+                                 <div className="h-full bg-yellow-500" style={{ width: '4%' }} />
                               </div>
 
                               {/* Thumb */}
@@ -346,15 +348,15 @@ export const HomePage = () => {
               
               <div className="w-full max-w-md mt-4">
                 <textarea
-                  value={recordNote}
-                  onChange={(e) => setRecordNote(e.target.value)}
+                  value={recordType === 'mood' ? moodNote : harvestNote}
+                  onChange={(e) => recordType === 'mood' ? setMoodNote(e.target.value) : setHarvestNote(e.target.value)}
                   placeholder={recordType === 'mood' ? "今天的旅途，你又遇到了哪些想要记录的事或情绪？(可选)" : "今天的旅途，你又收获了哪些值得记录的宝箱？（可选）"}
                   maxLength={100}
                   className="w-full p-4 bg-slate-50 rounded-2xl resize-none focus:outline-none focus:ring-2 focus:ring-slate-200 text-slate-700 placeholder:text-slate-400 text-center"
                   rows={3}
                 />
                 <div className="text-right text-xs text-slate-400 mt-2">
-                  {recordNote.length}/100
+                  {(recordType === 'mood' ? moodNote : harvestNote).length}/100
                 </div>
               </div>
             </div>
