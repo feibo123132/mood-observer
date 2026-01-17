@@ -1,7 +1,6 @@
 import { useSettingsStore } from '../store/useSettingsStore';
 import { getMoodState } from '../utils/moodUtils';
-
-type AudioMode = 'classical' | 'modern';
+import { AudioMode } from '../types';
 
 class AudioPlayerService {
   private static instance: AudioPlayerService;
