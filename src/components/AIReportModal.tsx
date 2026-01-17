@@ -87,7 +87,7 @@ export const AIReportModal = ({ moodScores, notes, weekNumber, year, customPromp
       const res = await app.callFunction({
         name: 'analyzeMood',
         data: { moodScores, notes, customPrompt }
-      }, { timeout: 60000 });
+      }, { timeout: 60000 } as any);
 
       if (res.result && res.result.success) {
         setFullReport(res.result.report);

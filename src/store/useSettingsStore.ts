@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 
-export type AudioMode = 'classical' | 'modern' | 'friend';
+import { AudioMode } from '../types';
 
 interface SettingsState {
   isAudioEnabled: boolean;

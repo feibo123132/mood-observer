@@ -26,6 +26,10 @@ class AudioPlayerService {
     if (score >= 96) level = 10;
     else if (score >= 90) level = 9; // 90-95 特殊处理
     
+    // 如果模式是 friend，暂时回退到 classical 或其他逻辑，或者确保资源存在
+    // 这里假设 friend 模式文件夹名为 friend
+    // 确保 mode 是有效的文件夹名
+    
     // 如果您想使用随机播放逻辑，可以解开下面的注释并修改 getRandomInt 逻辑
     // const randomId = Math.floor(Math.random() * 2) + 1; // 假设每个等级有2个文件：1.mp3, 2.mp3
     // return `/audio/${mode}/level_${level}/${randomId}.mp3`;

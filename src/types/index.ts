@@ -4,6 +4,7 @@ export interface MoodRecord {
   score: number; // 0-100. For harvest: 0, 25, 50, 75, 100
   note: string;
   type?: 'mood' | 'harvest';
+  deletedAt?: number;
 }
 
 export interface DailySummary {

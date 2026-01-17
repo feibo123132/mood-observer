@@ -67,7 +67,7 @@ export const RecordEditModal = ({ record, onClose }: RecordEditModalProps) => {
             <div className="relative z-10">
               <div className="text-5xl font-bold mb-2">{score}</div>
               <div className="text-lg font-medium opacity-90 flex items-center justify-center gap-2">
-                <span>{record.type === 'harvest' ? (score === 0 ? '😐' : '🎁') : moodState.emoji}</span>
+                <span>{moodState.emoji}</span>
                 <span>{moodState.label}</span>
               </div>
             </div>
