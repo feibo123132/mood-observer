@@ -2,63 +2,75 @@ export interface MoodState {
   label: string;
   description: string;
   color: string;
+  emoji: string;
 }
 
 export const getMoodState = (score: number): MoodState => {
   if (score >= 96) return {
     label: '🤯巅峰 / 极乐',
     description: '忘我、天人合一、灵魂升华、极致震撼',
-    color: '#ff00ff' // 极乐紫/光
+    color: '#ff00ff', // 极乐紫/光
+    emoji: '🤯'
   };
   if (score >= 90) return {
     label: '😍狂喜 / 热爱',
     description: '欢呼雀跃、深深的幸福感、想拥抱全世界',
-    color: '#ff3366' // 热烈红
+    color: '#ff3366', // 热烈红
+    emoji: '😍'
   };
   if (score >= 80) return {
     label: '😃兴奋 / 激动',
     description: '心跳加速、充满干劲、热血沸腾、强烈成就感',
-    color: '#ff6b6b' // 活力橙红
+    color: '#ff6b6b', // 活力橙红
+    emoji: '😃'
   };
   if (score >= 70) return {
     label: '🙂开心 / 愉悦',
     description: '嘴角上扬、有动力、期待、自信、被认可',
-    color: '#ffd93d' // 明亮黄
+    color: '#ffd93d', // 明亮黄
+    emoji: '🙂'
   };
   if (score >= 60) return {
     label: '😌惬意 / 安适',
     description: '轻松、舒服、小确幸、松弛感',
-    color: '#6bffb8' // 清新绿
+    color: '#6bffb8', // 清新绿
+    emoji: '😌'
   };
   if (score >= 50) return {
     label: '😐平静 / 归零',
     description: '既不开心也不难过、理智、放空、观察者模式',
-    color: '#4dabf7' // 平静蓝
+    color: '#4dabf7', // 平静蓝
+    emoji: '😐'
   };
   if (score >= 40) return {
     label: '🪫疲惫 / emo',
     description: '提不起劲、无聊、孤独、淡淡忧伤、不想说话',
-    color: '#a5d8ff' // 忧郁浅蓝
+    color: '#a5d8ff', // 忧郁浅蓝
+    emoji: '🪫'
   };
   if (score >= 30) return {
     label: '😒沮丧 / 烦躁',
     description: '俗称的“心情不好”、生气、委屈、抱怨等',
-    color: '#ced4da' // 灰暗
+    color: '#ced4da', // 灰暗
+    emoji: '😒'
   };
   if (score >= 20) return {
     label: '😖焦虑 / 挣扎',
     description: '坐立难安、强烈的担忧、自我怀疑、失眠',
-    color: '#868e96' // 深灰
+    color: '#868e96', // 深灰
+    emoji: '😖'
   };
   if (score >= 10) return {
     label: '😭极度痛苦',
     description: '痛哭流涕、极度恐惧、心碎、深深的无力感',
-    color: '#495057' // 极深灰
+    color: '#495057', // 极深灰
+    emoji: '😭'
   };
   return {
     label: '🥀绝望 / 崩塌',
     description: '极度抑郁、毁灭感、无意义、想放弃一切',
-    color: '#212529' // 漆黑
+    color: '#212529', // 漆黑
+    emoji: '🥀'
   };
 };
 

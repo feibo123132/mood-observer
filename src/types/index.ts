@@ -20,3 +20,5 @@ export interface MoodTheme {
   color: string;
   bgGradient: string;
 }
+
+export type AudioMode = 'classical' | 'modern' | 'friend';

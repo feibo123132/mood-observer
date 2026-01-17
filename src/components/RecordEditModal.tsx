@@ -43,7 +43,7 @@ export const RecordEditModal = ({ record, onClose }: RecordEditModalProps) => {
 
   const moodState = record.type === 'harvest' 
     ? { label: getHarvestLevel(score).label, color: getHarvestLevel(score).color, emoji: score === 0 ? '😐' : '🎁' }
-    : { ...getMoodState(score), emoji: getMoodState(score).emoji };
+    : getMoodState(score);
 
   return (
     <AnimatePresence>
