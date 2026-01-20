@@ -99,6 +99,7 @@ export const useMoodStore = create<MoodState>()(
               note: item.note,
               timestamp: item.timestamp,
               deletedAt: item.deletedAt, // Sync deletedAt status
+              type: item.type,
             })) as MoodRecord[];
 
             // 2. 双向同步：检查本地有哪些数据是云端没有的（补传）
