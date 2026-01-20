@@ -66,8 +66,7 @@ export const RecordEditModal = ({ record, onClose }: RecordEditModalProps) => {
           >
             <div className="relative z-10">
               <div className="text-5xl font-bold mb-2">{score}</div>
-              <div className="text-lg font-medium opacity-90 flex items-center justify-center gap-2">
-                <span>{moodState.emoji}</span>
+              <div className="text-lg font-medium opacity-90 flex items-center justify-center">
                 <span>{moodState.label}</span>
               </div>
             </div>
@@ -126,18 +125,18 @@ export const RecordEditModal = ({ record, onClose }: RecordEditModalProps) => {
                    <div className="w-full h-2 bg-slate-100 rounded-full relative">
                       {/* Track Background - Colored Segments */}
                       <div className="absolute inset-0 rounded-full overflow-hidden flex">
-                         <div className="h-full bg-gray-400" style={{ width: '70%' }} />
-                         <div className="h-full bg-green-500" style={{ width: '10%' }} />
-                         <div className="h-full bg-blue-500" style={{ width: '10%' }} />
-                         <div className="h-full bg-purple-500" style={{ width: '6%' }} />
-                         <div className="h-full bg-yellow-500" style={{ width: '4%' }} />
+                         <div className="h-full bg-gray-400" style={{ width: '25%' }} />
+                         <div className="h-full bg-green-500" style={{ width: '25%' }} />
+                         <div className="h-full bg-blue-500" style={{ width: '25%' }} />
+                         <div className="h-full bg-purple-500" style={{ width: '15%' }} />
+                         <div className="h-full bg-yellow-500" style={{ width: '10%' }} />
                       </div>
 
                       {/* Thumb */}
                       <div 
                         className="absolute top-1/2 -translate-y-1/2 w-7 h-7 bg-white rounded-full shadow-md border-4 transition-all duration-75 pointer-events-none z-20"
                         style={{ 
-                            left: `${score}%`, 
+                            left: `${(score - 60) / 40 * 100}%`, 
                             transform: `translate(-50%, -50%)`,
                             borderColor: moodState.color
                         }}
@@ -145,7 +144,7 @@ export const RecordEditModal = ({ record, onClose }: RecordEditModalProps) => {
 
                       <input
                         type="range"
-                        min="0"
+                        min="60"
                         max="100"
                         step="1"
                         value={score}

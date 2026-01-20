@@ -109,7 +109,7 @@ export const HomePage = () => {
   const toggleRecordType = () => {
     const newType = recordType === 'mood' ? 'harvest' : 'mood';
     setRecordType(newType);
-    setRecordScore(50); // Reset score to middle as requested
+    setRecordScore(newType === 'harvest' ? 60 : 50); // Reset score: 60 for harvest, 50 for mood
   };
 
   // If Wake Up mode
@@ -308,23 +308,23 @@ export const HomePage = () => {
                            <div className="w-full max-w-md h-2 bg-slate-100 rounded-full relative">
                               {/* Track Background - Colored Segments */}
                               <div className="absolute inset-0 rounded-full overflow-hidden flex">
-                                 {/* Common: 0-69 (70%) */}
-                                 <div className="h-full bg-gray-400" style={{ width: '70%' }} />
-                                 {/* Fine: 70-79 (10%) */}
-                                 <div className="h-full bg-green-500" style={{ width: '10%' }} />
-                                 {/* Rare: 80-89 (10%) */}
-                                 <div className="h-full bg-blue-500" style={{ width: '10%' }} />
-                                 {/* Epic: 90-95 (6%) */}
-                                 <div className="h-full bg-purple-500" style={{ width: '6%' }} />
-                                 {/* Legendary: 96-100 (4%) */}
-                                 <div className="h-full bg-yellow-500" style={{ width: '4%' }} />
+                                 {/* Common: 60-69 (25%) */}
+                                 <div className="h-full bg-gray-400" style={{ width: '25%' }} />
+                                 {/* Fine: 70-79 (25%) */}
+                                 <div className="h-full bg-green-500" style={{ width: '25%' }} />
+                                 {/* Rare: 80-89 (25%) */}
+                                 <div className="h-full bg-blue-500" style={{ width: '25%' }} />
+                                 {/* Epic: 90-95 (15%) */}
+                                 <div className="h-full bg-purple-500" style={{ width: '15%' }} />
+                                 {/* Legendary: 96-100 (10%) */}
+                                 <div className="h-full bg-yellow-500" style={{ width: '10%' }} />
                               </div>
 
                               {/* Thumb */}
                               <div 
                                 className="absolute top-1/2 -translate-y-1/2 w-7 h-7 bg-white rounded-full shadow-md border-4 transition-all duration-75 pointer-events-none z-20"
                                 style={{ 
-                                    left: `${recordScore}%`, 
+                                    left: `${(recordScore - 60) / 40 * 100}%`, 
                                     transform: `translate(-50%, -50%)`,
                                     borderColor: level.color
                                 }}
@@ -333,7 +333,7 @@ export const HomePage = () => {
                               {/* Input Range */}
                               <input
                                 type="range"
-                                min="0"
+                                min="60"
                                 max="100"
                                 step="1"
                                 value={recordScore}

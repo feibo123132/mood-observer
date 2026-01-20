@@ -16,7 +16,9 @@ interface MoodState {
   deleteRecord: (id: string) => Promise<void>;
   deleteMultipleRecords: (ids: string[]) => Promise<void>;
   restoreRecord: (id: string) => Promise<void>;
+  restoreMultipleRecords: (ids: string[]) => Promise<void>;
   permanentDeleteRecord: (id: string) => Promise<void>;
+  permanentDeleteMultipleRecords: (ids: string[]) => Promise<void>;
   cleanupTrash: () => void;
   updateRecord: (id: string, updates: { note?: string; score?: number }) => Promise<void>;
   
@@ -246,10 +248,6 @@ export const useMoodStore = create<MoodState>()(
         const currentEmail = localStorage.getItem('mood_user_email');
         if (currentEmail) {
           try {
-            // update field to delete it (or set null)
-            // TCB update uses set/remove logic, usually passing null or using specialized delete operator
-            // Here we assume updating to null or removing field. For simplicity, we set to null or 0.
-            // Let's check TCB update remove field syntax: _.remove()
             const _ = db.command;
             await db.collection('mood_records')
               .where({ id, userId: currentEmail })
@@ -260,8 +258,32 @@ export const useMoodStore = create<MoodState>()(
         }
       },
 
+      restoreMultipleRecords: async (ids) => {
+        if (!ids || ids.length === 0) return;
+        
+        set((state) => ({
+          records: state.records.map((r) => ids.includes(r.id) ? { ...r, deletedAt: undefined } : r)
+        }));
+
+        const currentEmail = localStorage.getItem('mood_user_email');
+        if (currentEmail) {
+          try {
+            const _ = db.command;
+            // 并发更新云端
+            await Promise.all(ids.map(id => 
+              db.collection('mood_records')
+                .where({ id, userId: currentEmail })
+                .update({ deletedAt: _.remove() })
+                .catch((e: any) => console.error(`Failed to restore ${id}`, e))
+            ));
+          } catch (err) {
+            console.error('Restore multiple cloud records failed:', err);
+          }
+        }
+      },
+
       permanentDeleteRecord: async (id) => {
-         set((state) => ({
+        set((state) => ({
           records: state.records.filter((r) => r.id !== id)
         }));
 
@@ -273,6 +295,29 @@ export const useMoodStore = create<MoodState>()(
               .remove();
           } catch (err) {
             console.error('Permanent delete cloud record failed:', err);
+          }
+        }
+      },
+
+      permanentDeleteMultipleRecords: async (ids) => {
+        if (!ids || ids.length === 0) return;
+
+        set((state) => ({
+          records: state.records.filter((r) => !ids.includes(r.id))
+        }));
+
+        const currentEmail = localStorage.getItem('mood_user_email');
+        if (currentEmail) {
+          try {
+            // 并发删除云端数据
+            await Promise.all(ids.map(id => 
+              db.collection('mood_records')
+                .where({ id, userId: currentEmail })
+                .remove()
+                .catch((e: any) => console.error(`Failed to permanently delete ${id}`, e))
+            ));
+          } catch (err) {
+            console.error('Permanent delete multiple cloud records failed:', err);
           }
         }
       },

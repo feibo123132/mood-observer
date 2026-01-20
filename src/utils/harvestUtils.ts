@@ -8,7 +8,7 @@ export interface HarvestLevel {
 
 export const HARVEST_LEVELS: HarvestLevel[] = [
   {
-    min: 0,
+    min: 60,
     max: 69,
     label: '😐 普通',
     description: '平平淡淡才是真，也是一种收获',
