@@ -9,7 +9,7 @@ interface MoodSphereProps {
 }
 
 export const MoodSphere = ({ score, size = 300, className = '' }: MoodSphereProps) => {
-  const color = useMemo(() => getGradientColor(score), [score]);
+  const { color } = useMemo(() => getMoodState(score), [score]);
   
   // Calculate breathing duration based on score
   const getDuration = (s: number) => {
@@ -52,7 +52,7 @@ export const MoodSphere = ({ score, size = 300, className = '' }: MoodSphereProp
         }}
         style={{
           background: `radial-gradient(circle at 30% 30%, rgba(255,255,255,0.8), ${color})`,
-          boxShadow: `0 0 60px ${color}`,
+          boxShadow: `0 0 60px ${color}`
         }}
       />
     </div>

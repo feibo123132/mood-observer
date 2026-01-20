@@ -36,12 +36,17 @@ export const CalendarPage = () => {
 
   // Aggregate daily stats
   const dailyStats = useMemo(() => {
-    const stats: Record<string, { total: number; count: number }> = {};
+    const stats: Record<string, { total: number; count: number; min: number; max: number }> = {};
     records.forEach(r => {
+      // Skip Harvest records - Calendar color is determined by Mood Forest only
+      if (r.type === 'harvest') return;
+
       const dateKey = format(new Date(r.timestamp), 'yyyy-MM-dd');
-      if (!stats[dateKey]) stats[dateKey] = { total: 0, count: 0 };
+      if (!stats[dateKey]) stats[dateKey] = { total: 0, count: 0, min: 100, max: 0 };
       stats[dateKey].total += r.score;
       stats[dateKey].count += 1;
+      stats[dateKey].min = Math.min(stats[dateKey].min, r.score);
+      stats[dateKey].max = Math.max(stats[dateKey].max, r.score);
     });
     return stats;
   }, [records]);
@@ -59,8 +64,10 @@ export const CalendarPage = () => {
     const key = format(date, 'yyyy-MM-dd');
     const stat = dailyStats[key];
     if (!stat) return 'transparent';
-    const avg = Math.round(stat.total / stat.count);
-    return getMoodState(avg).color;
+    
+    // New logic: if no records below 50, use max score; otherwise use average
+    const scoreToUse = stat.min >= 50 ? stat.max : Math.round(stat.total / stat.count);
+    return getMoodState(scoreToUse).color;
   };
 
   const selectedRecords = useMemo(() => {

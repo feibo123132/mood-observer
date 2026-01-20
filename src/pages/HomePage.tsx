@@ -301,6 +301,10 @@ export const HomePage = () => {
                               <h3 className="text-2xl font-bold" style={{ color: level.color }}>
                                 {level.label}
                               </h3>
+                              {/* Score Display */}
+                              <div className="flex items-center justify-center gap-2 text-sm text-gray-400 font-mono tracking-wider">
+                                SCORE: <span className="border-b border-gray-300 px-1">{recordScore}</span>
+                              </div>
                               <p className="text-sm text-slate-500">{level.description}</p>
                            </div>
 
