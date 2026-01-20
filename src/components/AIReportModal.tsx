@@ -6,17 +6,28 @@ import { app } from '../lib/cloudbase';
 import { useMoodStore } from '../store/useMoodStore';
 
 interface AIReportModalProps {
+  isOpen: boolean;
+  onClose: () => void;
   moodScores: number[];
   notes: string[];
+  types?: ('mood' | 'harvest')[]; // Added types prop
   weekNumber: number;
   year: number;
   customPrompt?: string;
-  onClose: () => void;
 }
 
 type AnalysisStatus = 'idle' | 'loading' | 'streaming' | 'done' | 'error' | 'view';
 
-export const AIReportModal = ({ moodScores, notes, weekNumber, year, customPrompt, onClose }: AIReportModalProps) => {
+export const AIReportModal = ({ 
+  isOpen, 
+  onClose, 
+  moodScores, 
+  notes, 
+  types = [], // Default to empty array
+  weekNumber, 
+  year,
+  customPrompt 
+}: AIReportModalProps) => {
   const { saveReport, deleteReport, reports } = useMoodStore();
   const reportKey = `${year}-${weekNumber}`;
   const savedReport = reports[reportKey];
@@ -86,7 +97,12 @@ export const AIReportModal = ({ moodScores, notes, weekNumber, year, customPromp
       // @ts-ignore - Some SDK versions support timeout in options
       const res = await app.callFunction({
         name: 'analyzeMood',
-        data: { moodScores, notes, customPrompt }
+        data: {
+          moodScores,
+          notes,
+          types,
+          customPrompt
+        }
       }, { timeout: 60000 } as any);
 
       if (res.result && res.result.success) {

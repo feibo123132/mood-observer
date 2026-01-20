@@ -8,11 +8,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 interface AIReportCardProps {
   moodScores: number[];
   notes: string[];
+  types?: ('mood' | 'harvest')[];
   weekNumber: number;
   year: number;
 }
 
-export const AIReportCard = ({ moodScores, notes, weekNumber, year }: AIReportCardProps) => {
+export const AIReportCard = ({ moodScores, notes, types = [], weekNumber, year }: AIReportCardProps) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [activeMenu, setActiveMenu] = useState<'none' | 'time' | 'custom'>('none');
@@ -165,6 +166,7 @@ export const AIReportCard = ({ moodScores, notes, weekNumber, year }: AIReportCa
         <AIReportModal
           moodScores={moodScores}
           notes={notes}
+          types={types}
           weekNumber={weekNumber}
           year={year}
           customPrompt={customPrompt || undefined}

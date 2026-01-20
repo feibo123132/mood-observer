@@ -1,11 +1,12 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 // Force refresh
-import { ArrowLeft, Clock, ChevronDown, ChevronLeft, ChevronRight, FileText } from 'lucide-react';
+import { ArrowLeft, Clock, ChevronDown, ChevronLeft, ChevronRight, FileText, Trees, BookOpen } from 'lucide-react';
 import { useMoodStore } from '../store/useMoodStore';
 import { useMoodStats, SortType } from '../hooks/useMoodStats';
 import { format, getYear } from 'date-fns';
 import { getMoodState } from '../utils/moodUtils';
+import { getHarvestLevel } from '../utils/harvestUtils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RecordEditModal } from '../components/RecordEditModal';
 import { MoodRecord } from '../types';
@@ -102,10 +103,117 @@ export const ReviewPage = () => {
     return null;
   }, [activeTab, selectedWeek]);
   
-  const { moodDistribution, weeklyRecords } = useMoodStats({ 
+  const { moodDistribution, harvestDistribution, weeklyRecords } = useMoodStats({ 
     sortBy, 
     dateRange 
   });
+
+  const [expandedLabel, setExpandedLabel] = useState<string | null>(null);
+  const [isMoodExpanded, setIsMoodExpanded] = useState(true);
+  const [isHarvestExpanded, setIsHarvestExpanded] = useState(true);
+
+  // Filter records by type
+  const moodRecords = weeklyRecords.filter(r => (r.type || 'mood') === 'mood');
+  const harvestRecords = weeklyRecords.filter(r => r.type === 'harvest');
+
+  // Helper to render record card
+  const renderRecordCard = (record: MoodRecord) => {
+    const isHarvest = record.type === 'harvest';
+    const state = isHarvest ? getHarvestLevel(record.score) : getMoodState(record.score);
+    
+    return (
+      <div 
+        key={record.id} 
+        onClick={() => setEditingRecord(record)}
+        className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow cursor-pointer group"
+      >
+        <div className="flex justify-between items-start mb-2">
+          <div className="flex flex-col">
+            <span className="text-xs text-slate-400 font-mono">
+              {format(new Date(record.timestamp), 'MM-dd HH:mm')}
+            </span>
+            <span className="text-sm font-bold text-slate-800 mt-0.5">
+              {state.label}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity">
+              编辑
+            </span>
+            <span 
+              className="text-xs font-bold px-2 py-0.5 rounded-full text-white"
+              style={{ backgroundColor: state.color }}
+            >
+              {record.score}
+            </span>
+          </div>
+        </div>
+        {record.note && (
+          <p className="text-slate-600 text-sm leading-relaxed border-t border-slate-50 pt-2 mt-2">
+            {record.note}
+          </p>
+        )}
+      </div>
+    );
+  };
+
+  // Helper to render distribution item with expansion
+  const renderDistributionItem = (item: any, maxCount: number) => {
+    const isExpanded = expandedLabel === item.label;
+    
+    return (
+      <div key={item.label} className="space-y-2">
+        <div 
+          onClick={() => setExpandedLabel(isExpanded ? null : item.label)}
+          className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-center justify-between group hover:shadow-md transition-all cursor-pointer"
+        >
+          <div className="flex items-center gap-3">
+            <div 
+              className="w-3 h-3 rounded-full shadow-sm ring-2 ring-slate-50"
+              style={{ background: item.color }}
+            />
+            <span className="text-slate-700 font-medium">{item.label}</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <div className="h-2 w-24 bg-slate-100 rounded-full overflow-hidden">
+                <div 
+                  className="h-full rounded-full opacity-60"
+                  style={{ 
+                    width: `${(item.count / maxCount) * 100}%`,
+                    background: item.color 
+                  }} 
+                />
+              </div>
+              <span className="text-sm font-bold text-slate-400 w-8 text-right">
+                {item.count}
+              </span>
+            </div>
+            <ChevronRight 
+              size={16} 
+              className={`text-slate-300 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`} 
+            />
+          </div>
+        </div>
+
+        <AnimatePresence>
+          {isExpanded && item.records && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden pl-4"
+            >
+              <div className="space-y-3 border-l-2 border-slate-100 pl-4 py-2">
+                {item.records.map(renderRecordCard)}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center">
@@ -148,7 +256,7 @@ export const ReviewPage = () => {
                   : 'text-slate-500 hover:text-slate-700'
               }`}
             >
-              {activeTab === 'weekly' ? `${selectedYear}年周回顾` : '周回顾'}
+              周回顾
               {activeTab === 'weekly' && <ChevronDown size={14} className={`transition-transform ${isYearPickerOpen ? 'rotate-180' : ''}`} />}
             </button>
 
@@ -177,42 +285,48 @@ export const ReviewPage = () => {
       <div className="w-full max-w-md px-6 pb-20 flex-1 overflow-y-auto">
         {activeTab === 'overall' ? (
           /* Overall Review Tab */
-          <div className="space-y-4">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">
-              情绪分布 ({moodDistribution.reduce((acc, curr) => acc + curr.count, 0)}条记录)
-            </h3>
+          <div className="space-y-8">
             
-            {moodDistribution.length === 0 ? (
-              <div className="text-center py-12 text-slate-400 font-light">
-                暂无足够数据生成分布图
+            {/* Mood Forest Distribution */}
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <Trees size={18} className="text-green-600" />
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                  情绪之森分布 ({moodDistribution.reduce((acc, curr) => acc + curr.count, 0)}条记录)
+                </h3>
               </div>
-            ) : (
-              moodDistribution.map((item) => (
-                <div key={item.label} className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-center justify-between group hover:shadow-md transition-all">
-                  <div className="flex items-center gap-3">
-                    <div 
-                      className="w-3 h-3 rounded-full shadow-sm ring-2 ring-slate-50"
-                      style={{ background: item.color }}
-                    />
-                    <span className="text-slate-700 font-medium">{item.label}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="h-2 w-24 bg-slate-100 rounded-full overflow-hidden">
-                      <div 
-                        className="h-full rounded-full opacity-60"
-                        style={{ 
-                          width: `${(item.count / moodDistribution[0].count) * 100}%`,
-                          background: item.color 
-                        }} 
-                      />
-                    </div>
-                    <span className="text-sm font-bold text-slate-400 w-8 text-right">
-                      {item.count}
-                    </span>
-                  </div>
+              
+              {moodDistribution.length === 0 ? (
+                <div className="text-center py-8 text-slate-400 font-light text-sm bg-white rounded-xl border border-dashed border-slate-100">
+                  暂无情绪记录
                 </div>
-              ))
-            )}
+              ) : (
+                <div className="space-y-3">
+                  {moodDistribution.map((item) => renderDistributionItem(item, moodDistribution[0].count))}
+                </div>
+              )}
+            </div>
+
+            {/* Treasure Journey Distribution */}
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <BookOpen size={18} className="text-amber-500" />
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                  宝藏之旅分布 ({harvestDistribution.reduce((acc, curr) => acc + curr.count, 0)}条记录)
+                </h3>
+              </div>
+              
+              {harvestDistribution.length === 0 ? (
+                <div className="text-center py-8 text-slate-400 font-light text-sm bg-white rounded-xl border border-dashed border-slate-100">
+                  暂无宝藏记录
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {harvestDistribution.map((item) => renderDistributionItem(item, harvestDistribution[0].count))}
+                </div>
+              )}
+            </div>
+
           </div>
         ) : (
           /* Weekly Review Tab */
@@ -329,6 +443,7 @@ export const ReviewPage = () => {
               <AIReportCard 
                 moodScores={weeklyRecords.map(r => r.score)} 
                 notes={weeklyRecords.map(r => r.note || '')}
+                types={weeklyRecords.map(r => r.type || 'mood')}
                 weekNumber={selectedWeek.weekNumber}
                 year={selectedYear}
               />
@@ -339,42 +454,85 @@ export const ReviewPage = () => {
                 该时段暂无记录
               </div>
             ) : (
-              <div className="space-y-3">
-                {weeklyRecords.map((record) => {
-                  const moodState = getMoodState(record.score);
-                  return (
-                    <div 
-                      key={record.id} 
-                      onClick={() => setEditingRecord(record)}
-                      className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow cursor-pointer group"
+              <div className="space-y-4">
+                  
+                {/* Mood Forest Section */}
+                {moodRecords.length > 0 && (
+                  <div className="space-y-2">
+                    <button 
+                      onClick={() => setIsMoodExpanded(!isMoodExpanded)}
+                      className="w-full flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100 rounded-xl transition-colors group"
                     >
-                      <div className="flex justify-between items-start mb-2">
-                        <div className="flex flex-col">
-                          <span className="text-xs text-slate-400 font-mono">
-                            {format(new Date(record.timestamp), 'MM-dd HH:mm')}
-                          </span>
-                          <span className="text-sm font-bold text-slate-800 mt-0.5">
-                            {moodState.label}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-bold text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity">
-                            编辑
-                          </span>
-                          <span 
-                            className="text-xs font-bold px-2 py-0.5 rounded-full text-white"
-                            style={{ backgroundColor: moodState.color }}
-                          >
-                            {record.score}
-                          </span>
+                      <div className="flex items-center gap-3">
+                        <span className={`transform transition-transform duration-200 ${isMoodExpanded ? 'rotate-90' : ''}`}>
+                          <ChevronRight size={16} className="text-slate-400" />
+                        </span>
+                        <div className="flex items-center gap-2 text-slate-700 font-medium">
+                          <Trees size={18} className="text-green-600" />
+                          <span>情绪之森</span>
                         </div>
                       </div>
-                      <p className="text-slate-600 text-sm leading-relaxed border-t border-slate-50 pt-2 mt-2">
-                        {record.note}
-                      </p>
-                    </div>
-                  );
-                })}
+                      <span className="text-xs font-medium text-slate-400 bg-white px-2 py-0.5 rounded-full shadow-sm">
+                        {moodRecords.length}
+                      </span>
+                    </button>
+                    
+                    <AnimatePresence initial={false}>
+                      {isMoodExpanded && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.2 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="space-y-3 pl-2">
+                            {moodRecords.map(renderRecordCard)}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                )}
+
+                {/* Treasure Journey Section */}
+                {harvestRecords.length > 0 && (
+                  <div className="space-y-2">
+                    <button 
+                      onClick={() => setIsHarvestExpanded(!isHarvestExpanded)}
+                      className="w-full flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100 rounded-xl transition-colors group"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className={`transform transition-transform duration-200 ${isHarvestExpanded ? 'rotate-90' : ''}`}>
+                          <ChevronRight size={16} className="text-slate-400" />
+                        </span>
+                        <div className="flex items-center gap-2 text-slate-700 font-medium">
+                          <BookOpen size={18} className="text-amber-500" />
+                          <span>宝藏之旅</span>
+                        </div>
+                      </div>
+                      <span className="text-xs font-medium text-slate-400 bg-white px-2 py-0.5 rounded-full shadow-sm">
+                        {harvestRecords.length}
+                      </span>
+                    </button>
+                    
+                    <AnimatePresence initial={false}>
+                      {isHarvestExpanded && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.2 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="space-y-3 pl-2">
+                            {harvestRecords.map(renderRecordCard)}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                )}
               </div>
             )}
           </div>

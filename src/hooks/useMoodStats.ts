@@ -1,42 +1,34 @@
 import { useMemo } from 'react';
 import { useMoodStore } from '../store/useMoodStore';
 import { getMoodState } from '../utils/moodUtils';
-import { subDays, isAfter, startOfDay, isWithinInterval } from 'date-fns';
+import { getHarvestLevel } from '../utils/harvestUtils';
+import { MoodRecord } from '../types'; // Import MoodRecord type
 
 export type SortType = 'time' | 'score_desc' | 'score_asc';
 
 interface UseMoodStatsProps {
-  sortBy?: SortType;
-  dateRange?: { start: Date; end: Date } | null;
+  sortBy: SortType;
+  dateRange: { start: Date; end: Date } | null;
 }
 
-export const useMoodStats = ({ sortBy = 'time', dateRange = null }: UseMoodStatsProps = {}) => {
+export const useMoodStats = ({ sortBy, dateRange }: UseMoodStatsProps) => {
   const { records } = useMoodStore();
 
-  const activeRecords = useMemo(() => records.filter(r => !r.deletedAt), [records]);
-
-  // 1. 统计情绪分布 (Mood Distribution)
-  const moodDistribution = useMemo(() => {
-    // 初始化 11 个档位的计数器
-    // 为了保持顺序，我们预定义好所有可能的状态标签
-    // 这里我们动态计算，但更好的方式是基于 moodUtils 的定义
-    const dist: Record<string, { count: number; color: string; label: string }> = {};
-    
-    // Filter by date range if provided, otherwise use all
-    const filteredForDist = dateRange 
-      ? activeRecords.filter(r => isWithinInterval(new Date(r.timestamp), dateRange))
-      : activeRecords;
-
-    filteredForDist.forEach(record => {
-      const { label, color } = getMoodState(record.score);
-      if (!dist[label]) {
-        dist[label] = { count: 0, color, label };
-      }
-      dist[label].count += 1;
+  // 0. Filter records by date range first
+  const activeRecords = useMemo(() => {
+    if (!dateRange) return records;
+    return records.filter(r => {
+      const t = new Date(r.timestamp).getTime();
+      return t >= dateRange.start.getTime() && t <= dateRange.end.getTime();
     });
+  }, [records, dateRange]);
 
-    // 转换为数组并按特定逻辑排序（这里简单按数量降序，或者您可以改为按情绪分数高低排序）
-    // Priority mapping for sorting (Higher score -> Higher priority)
+  // 1. Calculate Distributions (Mood & Harvest)
+  const distributions = useMemo(() => {
+    const moodDist: Record<string, { count: number; color: string; label: string; records: MoodRecord[] }> = {};
+    const harvestDist: Record<string, { count: number; color: string; label: string; records: MoodRecord[] }> = {};
+    
+    // Priority mappings
     const moodPriority: Record<string, number> = {
       '🤯 巅峰 / 极乐': 100,
       '😍 狂喜 / 热爱': 90,
@@ -51,58 +43,67 @@ export const useMoodStats = ({ sortBy = 'time', dateRange = null }: UseMoodStats
       '🥀 绝望 / 崩塌': 0
     };
 
-    return Object.values(dist).sort((a, b) => {
+    const harvestPriority: Record<string, number> = {
+      '😎 史诗': 100,
+      '😍 传说': 90,
+      '🤩 完美': 80,
+      '😃 卓越': 70,
+      '🙂 稀有': 60,
+      '😌 精良': 50,
+      '😐 普通': 40
+    };
+
+    activeRecords.forEach(record => {
+      const isHarvest = record.type === 'harvest';
+      
+      if (isHarvest) {
+        const { label, color } = getHarvestLevel(record.score);
+        if (!harvestDist[label]) {
+          harvestDist[label] = { count: 0, color, label, records: [] };
+        }
+        harvestDist[label].count += 1;
+        harvestDist[label].records.push(record);
+      } else {
+        const { label, color } = getMoodState(record.score);
+        if (!moodDist[label]) {
+          moodDist[label] = { count: 0, color, label, records: [] };
+        }
+        moodDist[label].count += 1;
+        moodDist[label].records.push(record);
+      }
+    });
+
+    const sortedMoodDist = Object.values(moodDist).sort((a, b) => {
       const priorityA = moodPriority[a.label] ?? -1;
       const priorityB = moodPriority[b.label] ?? -1;
       return priorityB - priorityA;
     });
-  }, [activeRecords, dateRange]);
 
-  // 2. 周回顾数据 (Weekly Records) -> Now supports custom range
+    const sortedHarvestDist = Object.values(harvestDist).sort((a, b) => {
+      const priorityA = harvestPriority[a.label] ?? -1;
+      const priorityB = harvestPriority[b.label] ?? -1;
+      return priorityB - priorityA;
+    });
+
+    return { mood: sortedMoodDist, harvest: sortedHarvestDist };
+  }, [activeRecords]);
+
+  // 2. Weekly Records (Sorted List)
   const weeklyRecords = useMemo(() => {
-    // 确保 records 是数组
-    if (!Array.isArray(activeRecords)) return [];
-
-    let filtered = [];
-    
-    if (dateRange) {
-      filtered = activeRecords.filter(r => isWithinInterval(new Date(r.timestamp), dateRange));
-    } else {
-      // Default: Last 7 days
-      const oneWeekAgo = startOfDay(subDays(new Date(), 7));
-      filtered = activeRecords.filter(r => {
-        if (!r.timestamp) return false;
-        return isAfter(new Date(r.timestamp), oneWeekAgo);
-      });
-    }
-
-    // 排序逻辑 (确保创建新副本进行排序)
-    return [...filtered].sort((a, b) => {
-      const timeA = Number(a.timestamp);
-      const timeB = Number(b.timestamp);
-      const scoreA = Number(a.score);
-      const scoreB = Number(b.score);
-
+    return [...activeRecords].sort((a, b) => {
       if (sortBy === 'time') {
-        // 时间倒序：新的在前
-        return timeB - timeA;
+        return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
       }
       if (sortBy === 'score_desc') {
-        // 分数高到低。如果分数相同，按时间倒序
-        if (scoreB !== scoreA) return scoreB - scoreA;
-        return timeB - timeA;
+        return b.score - a.score || new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
       }
-      if (sortBy === 'score_asc') {
-        // 分数低到高。如果分数相同，按时间倒序
-        if (scoreA !== scoreB) return scoreA - scoreB;
-        return timeB - timeA;
-      }
-      return 0;
+      return a.score - b.score || new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
     });
-  }, [activeRecords, sortBy, dateRange]);
+  }, [activeRecords, sortBy]);
 
-  return {
-    moodDistribution,
-    weeklyRecords
+  return { 
+    moodDistribution: distributions.mood, 
+    harvestDistribution: distributions.harvest,
+    weeklyRecords 
   };
 };

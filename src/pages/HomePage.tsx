@@ -122,9 +122,9 @@ export const HomePage = () => {
           className="z-10 w-full max-w-md flex flex-col items-center gap-12"
         >
           <div className="text-center space-y-2">
-            <h1 className="text-2xl font-light text-slate-800">早安，观察员</h1>
-            <p className="text-slate-500">设定今天的基调</p>
-          </div>
+                <h1 className="text-2xl font-light text-slate-800">你好呀，情绪观察员</h1>
+                <p className="text-slate-500">请设定今天的情绪基调</p>
+              </div>
           
           <MoodSphere score={wakeUpScore} size={200} />
           
