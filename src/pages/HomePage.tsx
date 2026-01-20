@@ -369,12 +369,12 @@ export const HomePage = () => {
                   value={recordType === 'mood' ? moodNote : harvestNote}
                   onChange={(e) => recordType === 'mood' ? setMoodNote(e.target.value) : setHarvestNote(e.target.value)}
                   placeholder={recordType === 'mood' ? "今天的旅途，你又遇到了哪些想要记录的事或情绪？(可选)" : "今天的旅途，你又收获了哪些值得记录的宝箱？（可选）"}
-                  maxLength={100}
+                  maxLength={300}
                   className="w-full p-4 bg-slate-50 rounded-2xl resize-none focus:outline-none focus:ring-2 focus:ring-slate-200 text-slate-700 placeholder:text-slate-400 text-center"
                   rows={3}
                 />
                 <div className="text-right text-xs text-slate-400 mt-2">
-                  {(recordType === 'mood' ? moodNote : harvestNote).length}/100
+                  {(recordType === 'mood' ? moodNote : harvestNote).length}/300
                 </div>
               </div>
             </div>

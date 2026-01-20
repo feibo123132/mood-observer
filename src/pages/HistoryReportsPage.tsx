@@ -1,24 +1,29 @@
-import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Trash2, Calendar, FileText, Brain } from 'lucide-react';
+import { useState, useMemo } from 'react';
 import { useMoodStore } from '../store/useMoodStore';
-import { useState } from 'react';
+import { format, getWeek, startOfWeek, endOfWeek } from 'date-fns';
+import { zhCN } from 'date-fns/locale';
+import { FileText, ArrowLeft, Calendar, Trash2, Brain, PanelRight, Volume2, PieChart } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export const HistoryReportsPage = () => {
   const navigate = useNavigate();
   const { reports, deleteReport } = useMoodStore();
-  const [selectedReport, setSelectedReport] = useState<{key: string, content: string} | null>(null);
+  const [selectedReport, setSelectedReport] = useState<{key: string, content: string, date: string} | null>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  // Parse report keys (year-week) and sort by date descending
-  const sortedReports = Object.entries(reports)
-    .map(([key, content]) => {
-      const [year, week] = key.split('-').map(Number);
-      return { key, year, week, content };
-    })
-    .sort((a, b) => {
-      if (a.year !== b.year) return b.year - a.year;
-      return b.week - a.week;
-    });
+  // Group reports by year and week
+  const sortedReports = useMemo(() => {
+    return Object.entries(reports)
+      .map(([key, content]) => {
+        const [year, week] = key.split('-').map(Number);
+        return { key, year, week, content };
+      })
+      .sort((a, b) => {
+        if (a.year !== b.year) return b.year - a.year;
+        return b.week - a.week;
+      });
+  }, [reports]);
 
   const handleDelete = (e: React.MouseEvent, year: number, week: number) => {
     e.stopPropagation();
@@ -107,25 +112,86 @@ export const HistoryReportsPage = () => {
             
             <motion.div
               layoutId={selectedReport.key}
-              className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh] z-10"
+              className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col h-[600px] z-10"
             >
                {/* Modal Header */}
                <div className="flex items-center justify-between p-4 border-b border-slate-100 bg-slate-50/50">
-                  <h3 className="font-bold text-slate-800">报告详情</h3>
+                  {/* Left: Back Button */}
                   <button 
                     onClick={() => setSelectedReport(null)}
-                    className="p-1 rounded-full hover:bg-slate-200 transition-colors"
+                    className="p-2 rounded-full hover:bg-slate-200 transition-colors text-slate-500"
                   >
-                    <ArrowLeft size={20} className="text-slate-500" />
+                    <ArrowLeft size={20} />
+                  </button>
+                  
+                  {/* Center: Title */}
+                  <h3 className="font-bold text-slate-800 text-lg absolute left-1/2 -translate-x-1/2">
+                    报告详情
+                  </h3>
+
+                  {/* Right: Sidebar Icon */}
+                  <button 
+                    onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                    className={`p-2 rounded-full transition-colors ${isSidebarOpen ? 'bg-blue-100 text-blue-600' : 'hover:bg-slate-200 text-slate-500'}`}
+                  >
+                    <PanelRight size={20} />
                   </button>
                </div>
 
-              <div className="p-6 overflow-y-auto">
-                <div className="prose prose-sm prose-slate max-w-none">
-                  <div className="text-slate-600 text-base leading-relaxed whitespace-pre-wrap font-sans">
-                    {selectedReport.content}
+              <div className="flex flex-1 overflow-hidden relative">
+                {/* Main Content */}
+                <div className="flex-1 p-6 overflow-y-auto">
+                  <div className="prose prose-sm prose-slate max-w-none">
+                    <div className="text-slate-600 text-base leading-relaxed whitespace-pre-wrap font-sans">
+                      {selectedReport.content}
+                    </div>
                   </div>
                 </div>
+
+                {/* Sidebar Drawer */}
+                <AnimatePresence>
+                  {isSidebarOpen && (
+                    <motion.div
+                      initial={{ x: '100%', opacity: 0 }}
+                      animate={{ x: 0, opacity: 1 }}
+                      exit={{ x: '100%', opacity: 0 }}
+                      transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                      className="w-48 border-l border-slate-100 bg-slate-50/80 backdrop-blur-sm p-4 flex flex-col gap-4 z-20 absolute right-0 top-0 bottom-0 shadow-inner"
+                    >
+                       <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+                         智能助手
+                       </div>
+                       
+                       {/* Feature 1: Report Reading */}
+                       <button 
+                         className="flex items-center gap-3 p-3 rounded-xl bg-white shadow-sm hover:shadow-md hover:bg-blue-50 transition-all group text-left"
+                         onClick={() => alert('引入豆包语音模型，帮忙阅读文字报告内容 (开发中)')}
+                       >
+                         <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 group-hover:scale-110 transition-transform">
+                           <Volume2 size={16} />
+                         </div>
+                         <div className="flex-1">
+                           <div className="text-sm font-medium text-slate-700 group-hover:text-blue-700">报告朗读</div>
+                           <div className="text-[10px] text-slate-400 mt-0.5">语音播报</div>
+                         </div>
+                       </button>
+
+                       {/* Feature 2: Content Visualization */}
+                       <button 
+                         className="flex items-center gap-3 p-3 rounded-xl bg-white shadow-sm hover:shadow-md hover:bg-purple-50 transition-all group text-left"
+                         onClick={() => alert('将报告的内容转化为html页面等 (开发中)')}
+                       >
+                         <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center text-purple-600 group-hover:scale-110 transition-transform">
+                           <PieChart size={16} />
+                         </div>
+                         <div className="flex-1">
+                           <div className="text-sm font-medium text-slate-700 group-hover:text-purple-700">内容可视化</div>
+                           <div className="text-[10px] text-slate-400 mt-0.5">图表分析</div>
+                         </div>
+                       </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </motion.div>
           </div>

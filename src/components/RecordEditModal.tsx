@@ -110,7 +110,11 @@ export const RecordEditModal = ({ record, onClose }: RecordEditModalProps) => {
                 className="w-full p-4 bg-slate-50 rounded-2xl resize-none focus:outline-none focus:ring-2 focus:ring-slate-200 text-slate-700 placeholder:text-slate-400 text-sm leading-relaxed"
                 rows={4}
                 placeholder="记录下当下的感受..."
+                maxLength={300}
               />
+              <div className="text-right text-xs text-slate-400">
+                {note.length}/300
+              </div>
             </div>
 
             {/* Score Slider */}
