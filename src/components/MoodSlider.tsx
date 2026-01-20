@@ -7,8 +7,8 @@ interface MoodSliderProps {
 }
 
 export const MoodSlider = ({ value, onChange, className = '' }: MoodSliderProps) => {
-  const { label, description } = getMoodState(value);
-  const color = getGradientColor(value);
+  const { label, description, color } = getMoodState(value); // Use getMoodState directly for color
+  // const color = getGradientColor(value); // REMOVED: No more gradient interpolation
 
   // Define segments based on moodUtils logic
   const segments = [
@@ -40,7 +40,7 @@ export const MoodSlider = ({ value, onChange, className = '' }: MoodSliderProps)
   return (
     <div className={`w-full max-w-md flex flex-col items-center gap-6 ${className}`}>
       <div className="text-center space-y-2">
-        <div className="text-3xl font-light transition-colors duration-300" style={{ color }}>
+        <div className="text-3xl font-bold" style={{ color }}>
           {label}
         </div>
         <div className="flex items-center justify-center gap-2 text-sm text-gray-400 font-mono tracking-wider">

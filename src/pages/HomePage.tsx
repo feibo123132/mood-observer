@@ -301,9 +301,22 @@ export const HomePage = () => {
                               <h3 className="text-2xl font-bold" style={{ color: level.color }}>
                                 {level.label}
                               </h3>
-                              {/* Score Display */}
+                              {/* Score Display with Editable Input */}
                               <div className="flex items-center justify-center gap-2 text-sm text-gray-400 font-mono tracking-wider">
-                                SCORE: <span className="border-b border-gray-300 px-1">{recordScore}</span>
+                                SCORE: 
+                                <input
+                                  type="number"
+                                  min="60"
+                                  max="100"
+                                  value={recordScore}
+                                  onChange={(e) => {
+                                    let val = Number(e.target.value);
+                                    if (val < 60) val = 60;
+                                    if (val > 100) val = 100;
+                                    setRecordScore(val);
+                                  }}
+                                  className="w-12 bg-transparent border-b border-gray-300 focus:border-slate-500 focus:outline-none text-center font-mono"
+                                />
                               </div>
                               <p className="text-sm text-slate-500">{level.description}</p>
                            </div>

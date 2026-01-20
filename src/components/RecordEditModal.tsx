@@ -1,12 +1,13 @@
-import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { X, Save, Trash2, Calendar, Clock } from 'lucide-react';
-import { MoodSlider } from './MoodSlider';
+import { motion, AnimatePresence } from 'framer-motion';
 import { MoodRecord } from '../types';
-import { getMoodState } from '../utils/moodUtils';
+import { getMoodState, getGradientColor } from '../utils/moodUtils';
 import { getHarvestLevel } from '../utils/harvestUtils';
 import { format } from 'date-fns';
+import { zhCN } from 'date-fns/locale';
+import { useState, useEffect } from 'react';
 import { useMoodStore } from '../store/useMoodStore';
+import { MoodSlider } from './MoodSlider';
 
 interface RecordEditModalProps {
   record: MoodRecord | null;
@@ -113,15 +114,36 @@ export const RecordEditModal = ({ record, onClose }: RecordEditModalProps) => {
             </div>
 
             {/* Score Slider */}
-            <div className="space-y-4">
-               <div className="flex justify-between items-center px-1">
-                 <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                   调整分数
-                 </label>
-               </div>
-               
-               {record.type === 'harvest' ? (
-                  /* Harvest Slider */
+            <div className="mb-6">
+              <h3 className="text-sm font-medium text-slate-400 mb-4">调整分数</h3>
+              {record.type === 'harvest' ? (
+                 /* Harvest Slider using MoodSlider component logic (Customized) */
+                 <div className="w-full max-w-md flex flex-col items-center gap-6">
+                   {/* Text Info */}
+                   <div className="text-center space-y-2">
+                      <h3 className="text-3xl font-bold transition-colors duration-300" style={{ color: moodState.color }}>
+                        {moodState.label}
+                      </h3>
+                      <div className="flex items-center justify-center gap-2 text-sm text-gray-400 font-mono tracking-wider">
+                        SCORE: 
+                        <input
+                          type="number"
+                          min="60"
+                          max="100"
+                          value={score}
+                          onChange={(e) => {
+                            let val = Number(e.target.value);
+                            if (val < 60) val = 60;
+                            if (val > 100) val = 100;
+                            setScore(val);
+                          }}
+                          className="w-12 bg-transparent border-b border-gray-300 focus:border-slate-500 focus:outline-none text-center font-mono"
+                        />
+                      </div>
+                      <p className="text-sm text-slate-500">{getHarvestLevel(score).description}</p>
+                   </div>
+
+                   {/* Custom Harvest Slider Track */}
                    <div className="w-full h-2 bg-slate-100 rounded-full relative">
                       {/* Track Background - Colored Segments */}
                       <div className="absolute inset-0 rounded-full overflow-hidden flex">
@@ -152,10 +174,10 @@ export const RecordEditModal = ({ record, onClose }: RecordEditModalProps) => {
                         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-30"
                       />
                    </div>
-               ) : (
-                  /* Mood Slider */
-                  <MoodSlider value={score} onChange={setScore} />
-               )}
+                 </div>
+              ) : (
+                <MoodSlider value={score} onChange={setScore} />
+              )}
             </div>
 
             {/* Actions */}

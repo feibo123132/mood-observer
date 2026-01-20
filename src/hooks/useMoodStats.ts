@@ -36,7 +36,26 @@ export const useMoodStats = ({ sortBy = 'time', dateRange = null }: UseMoodStats
     });
 
     // 转换为数组并按特定逻辑排序（这里简单按数量降序，或者您可以改为按情绪分数高低排序）
-    return Object.values(dist).sort((a, b) => b.count - a.count);
+    // Priority mapping for sorting (Higher score -> Higher priority)
+    const moodPriority: Record<string, number> = {
+      '🤯 巅峰 / 极乐': 100,
+      '😍 狂喜 / 热爱': 90,
+      '😃 兴奋 / 激动': 80,
+      '🙂 开心 / 愉悦': 70,
+      '😌 惬意 / 安适': 60,
+      '😐 平静 / 归零': 50,
+      '🪫 疲惫 / emo': 40,
+      '😒 沮丧 / 烦躁': 30,
+      '😖 焦虑 / 挣扎': 20,
+      '😭 极度痛苦': 10,
+      '🥀 绝望 / 崩塌': 0
+    };
+
+    return Object.values(dist).sort((a, b) => {
+      const priorityA = moodPriority[a.label] ?? -1;
+      const priorityB = moodPriority[b.label] ?? -1;
+      return priorityB - priorityA;
+    });
   }, [activeRecords, dateRange]);
 
   // 2. 周回顾数据 (Weekly Records) -> Now supports custom range
