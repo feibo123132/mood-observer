@@ -1,0 +1,10 @@
+{
+  "name": "generatePodcast",
+  "version": "1.0.0",
+  "description": "Volcano Engine Podcast Generator using WebSocket Binary Protocol",
+  "main": "index.js",
+  "dependencies": {
+    "ws": "^8.16.0",
+    "uuid": "^9.0.1"
+  }
+}
