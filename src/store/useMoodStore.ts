@@ -33,6 +33,7 @@ interface MoodState {
   deleteReport: (year: number, week: number) => void;
 
   clearLocalData: () => void;
+  fixLegacyData: () => Promise<void>;
 }
 
 export const useMoodStore = create<MoodState>()(
@@ -159,8 +160,12 @@ export const useMoodStore = create<MoodState>()(
 
       addRecord: async (record) => {
         const id = crypto.randomUUID();
+        // FIXED: 强制使用当前时间，不依赖外部输入
         const timestamp = Date.now();
-        const newRecord = { ...record, id, timestamp };
+        const date = new Date().toISOString();
+
+        // 注意：这里显式覆盖了 record 中的 date 和 timestamp
+        const newRecord = { ...record, id, timestamp, date };
 
         // 使用 Map 确保本地更新不重复
         set((state) => {
@@ -354,6 +359,75 @@ export const useMoodStore = create<MoodState>()(
           } catch (err) {
             console.error('Update cloud record failed:', err);
           }
+        }
+      },
+
+      fixLegacyData: async () => {
+        const { records } = get();
+        const now = Date.now();
+        // 注意：这里不能用同一个 date 字符串覆盖所有，否则所有修复后的记录时间都一样了。
+        // 应该针对每条记录，用它自己的 timestamp 生成 date。
+        
+        // 找出需要修复的记录 ID:
+        // 1. timestamp 小于 2026 年
+        // 2. OR date 字段缺失
+        const recordsToFix = records.filter(r => 
+          !r.date || new Date(r.timestamp).getFullYear() < 2026
+        );
+        
+        const idsToFix = recordsToFix.map(r => r.id);
+
+        if (idsToFix.length === 0) {
+          console.log('🎉 没有发现脏数据 (缺失 date 或年份错误)。');
+          return;
+        }
+
+        console.log(`🧹 发现 ${idsToFix.length} 条脏数据，开始修复...`);
+
+        // 批量更新本地
+        set(state => ({
+          records: state.records.map(r => {
+            if (idsToFix.includes(r.id)) {
+              // 如果年份错误，强制更新到当前时间
+              const isYearWrong = new Date(r.timestamp).getFullYear() < 2026;
+              const newTimestamp = isYearWrong ? now : r.timestamp;
+              const newDate = new Date(newTimestamp).toISOString();
+              
+              return { ...r, timestamp: newTimestamp, date: newDate };
+            }
+            return r;
+          })
+        }));
+
+        // 批量更新云端
+        const currentEmail = localStorage.getItem('mood_user_email');
+        if (currentEmail) {
+          console.log('☁️ 正在同步修复到云端...');
+          try {
+            // 注意：这里需要对每条记录单独计算 timestamp 和 date，所以不能简单地批量 update 相同的值
+            // 但为了简化，如果主要是修复旧年份数据，我们可以统一更新。
+            // 如果是修复 date 缺失但 timestamp 正确的数据，我们应该用它原本的 timestamp。
+            
+            // 策略：遍历所有待修复记录，逐条（或分组）更新
+            const updates = recordsToFix.map(r => {
+              const isYearWrong = new Date(r.timestamp).getFullYear() < 2026;
+              const newTimestamp = isYearWrong ? now : r.timestamp;
+              const newDate = new Date(newTimestamp).toISOString();
+              
+              return db.collection('mood_records')
+                .where({ id: r.id, userId: currentEmail })
+                .update({ timestamp: newTimestamp, date: newDate });
+            });
+
+            const results = await Promise.allSettled(updates);
+            
+            const successCount = results.filter(r => r.status === 'fulfilled').length;
+            console.log(`✅ 修复完成！本地更新 ${idsToFix.length} 条，云端同步成功 ${successCount} 条。`);
+          } catch (err) {
+            console.error('云端批量修复失败:', err);
+          }
+        } else {
+          console.log(`✅ 本地修复完成！(未登录，跳过云端同步)`);
         }
       },
       
