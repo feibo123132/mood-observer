@@ -9,7 +9,7 @@ export const app = cloudbase.init({
   env: ENV_ID,
   region: 'ap-shanghai', // 默认为上海，如果是其他区域请修改
   // @ts-ignore
-  timeout: 60000 // 设置全局超时为 60s
+  timeout: 300000 // 设置全局超时为 5分钟 (300s)
 });
 
 export const auth = app.auth({

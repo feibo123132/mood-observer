@@ -2,15 +2,57 @@ import { useState, useMemo } from 'react';
 import { useMoodStore } from '../store/useMoodStore';
 import { format, getWeek, startOfWeek, endOfWeek } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
-import { FileText, ArrowLeft, Calendar, Trash2, Brain, PanelRight, Volume2, PieChart } from 'lucide-react';
+import { FileText, ArrowLeft, Calendar, Trash2, Brain, PanelRight, Volume2, PieChart, Loader2, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { app } from '../lib/cloudbase';
 
 export const HistoryReportsPage = () => {
   const navigate = useNavigate();
   const { reports, deleteReport } = useMoodStore();
   const [selectedReport, setSelectedReport] = useState<{key: string, content: string, date: string} | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [retryMode, setRetryMode] = useState(false);
+
+  const handleGeneratePodcast = async (content: string, year: number, week: number) => {
+    if (isGenerating) return;
+    setIsGenerating(true);
+    try {
+      // 1. Mandatory Auth Check
+      await app.auth().signInAnonymously();
+      
+      // 2. Call Cloud Function
+      const res = await app.callFunction({
+        name: 'generatePodcast',
+        data: { text: content, year, week }
+      });
+
+      // @ts-ignore
+      if (res.result?.success && res.result?.audioUrl) {
+        // @ts-ignore
+        setAudioUrl(res.result.audioUrl);
+        setRetryMode(false);
+      } else {
+        // @ts-ignore
+        alert('生成失败: ' + (res.result?.error || '未知错误'));
+      }
+    } catch (error: any) {
+      console.error('Podcast generation failed:', error);
+      let errorMsg = error.message || '未知错误';
+      
+      // Handle Timeout / Network Error (504)
+      if (errorMsg.includes('timeout') || errorMsg.includes('network') || errorMsg.includes('504')) {
+        setRetryMode(true);
+        alert('请求超时（后台仍在运行），请稍等片刻后点击“点击获取结果”按钮即可播放。');
+      } else {
+        alert('生成出错: ' + errorMsg);
+      }
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   // Group reports by year and week
   const sortedReports = useMemo(() => {
@@ -164,15 +206,20 @@ export const HistoryReportsPage = () => {
                        
                        {/* Feature 1: Report Reading */}
                        <button 
-                         className="flex items-center gap-3 p-3 rounded-xl bg-white shadow-sm hover:shadow-md hover:bg-blue-50 transition-all group text-left"
-                         onClick={() => alert('引入豆包语音模型，帮忙阅读文字报告内容 (开发中)')}
+                         className="flex items-center gap-3 p-3 rounded-xl bg-white shadow-sm hover:shadow-md hover:bg-blue-50 transition-all group text-left disabled:opacity-50 disabled:cursor-not-allowed"
+                         onClick={() => selectedReport && handleGeneratePodcast(selectedReport.content, selectedReport.year, selectedReport.week)}
+                         disabled={isGenerating}
                        >
-                         <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 group-hover:scale-110 transition-transform">
-                           <Volume2 size={16} />
+                         <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-transform ${retryMode ? 'bg-orange-100 text-orange-600' : 'bg-blue-100 text-blue-600 group-hover:scale-110'}`}>
+                           {isGenerating ? <Loader2 size={16} className="animate-spin" /> : <Volume2 size={16} />}
                          </div>
                          <div className="flex-1">
-                           <div className="text-sm font-medium text-slate-700 group-hover:text-blue-700">报告朗读</div>
-                           <div className="text-[10px] text-slate-400 mt-0.5">语音播报</div>
+                           <div className={`text-sm font-medium ${retryMode ? 'text-orange-600' : 'text-slate-700 group-hover:text-blue-700'}`}>
+                             {isGenerating ? '处理中...' : (retryMode ? '点击获取结果' : '报告朗读')}
+                           </div>
+                           <div className="text-[10px] text-slate-400 mt-0.5">
+                             {retryMode ? '后台生成中' : '语音播报'}
+                           </div>
                          </div>
                        </button>
 
@@ -193,6 +240,48 @@ export const HistoryReportsPage = () => {
                   )}
                 </AnimatePresence>
               </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Audio Player Modal */}
+      <AnimatePresence>
+        {audioUrl && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setAudioUrl(null)}
+              className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl p-6 z-10"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                   <div className="p-2 bg-blue-100 text-blue-600 rounded-lg">
+                     <Volume2 size={20} />
+                   </div>
+                   <h3 className="font-bold text-slate-800">情绪报告播客</h3>
+                </div>
+                <button 
+                  onClick={() => setAudioUrl(null)}
+                  className="p-2 hover:bg-slate-100 rounded-full text-slate-500 transition-colors"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              
+              <audio controls autoPlay src={audioUrl} className="w-full" />
+              
+              <p className="text-xs text-slate-400 mt-4 text-center">
+                由豆包语音模型生成
+              </p>
             </motion.div>
           </div>
         )}

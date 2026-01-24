@@ -530,11 +530,41 @@ async function FinishSession(ws, sessionId) {
 // PART 5: Main Cloud Function
 // ============================================================================
 
+const tcb = require('@cloudbase/node-sdk');
+
+const cloud = tcb.init({
+  env: tcb.SYMBOL_CURRENT_ENV
+});
+
+const db = cloud.database();
+
 exports.main = async (event, context) => {
   console.log('Function generatePodcast invoked');
   
-  const { text } = event;
+  const { text, year, week } = event;
   if (!text) return { success: false, error: 'Missing text input' };
+
+  // 0. Check if file exists in Storage (Idempotency)
+  // File path: reports/podcast_{year}_{week}.mp3
+  if (year && week) {
+    const cloudPath = `reports/podcast_${year}_${week}.mp3`;
+    try {
+      const res = await cloud.getTempFileURL({
+        fileList: [cloudPath]
+      });
+      // Check if file exists (status code 0 means success)
+      if (res.fileList && res.fileList[0] && res.fileList[0].status === 0) {
+        console.log('Found existing podcast:', res.fileList[0].tempFileURL);
+        return {
+          success: true,
+          audioUrl: res.fileList[0].tempFileURL,
+          isCached: true
+        };
+      }
+    } catch (e) {
+      console.log('Cache check failed, proceeding to generate:', e);
+    }
+  }
 
   // 1. Env Check
   const APPID = process.env.VOLC_APPID;
@@ -573,8 +603,8 @@ exports.main = async (event, context) => {
     // Global Timeout
     const timeoutHandle = setTimeout(() => {
         ws.terminate();
-        resolve({ success: false, error: 'Global Timeout (60s)' });
-    }, 60000);
+        resolve({ success: false, error: 'Global Timeout (300s)' });
+    }, 300000);
 
     try {
         // Wait for Open
@@ -673,6 +703,33 @@ exports.main = async (event, context) => {
         console.log(`Total Audio Size: ${totalAudio.length} bytes`);
         
         if (totalAudio.length > 0) {
+            // Upload to Cloud Storage if year/week provided
+            if (year && week) {
+                const cloudPath = `reports/podcast_${year}_${week}.mp3`;
+                try {
+                    console.log('Uploading to Storage:', cloudPath);
+                    await cloud.uploadFile({
+                        cloudPath: cloudPath,
+                        fileContent: totalAudio,
+                    });
+                    
+                    const res = await cloud.getTempFileURL({
+                        fileList: [cloudPath]
+                    });
+                    
+                    if (res.fileList && res.fileList[0] && res.fileList[0].status === 0) {
+                        resolve({
+                            success: true,
+                            audioUrl: res.fileList[0].tempFileURL
+                        });
+                        return;
+                    }
+                } catch (uploadErr) {
+                    console.error('Upload failed, falling back to base64:', uploadErr);
+                }
+            }
+
+            // Fallback: Return Base64
             const base64Audio = totalAudio.toString('base64');
             const dataUri = `data:audio/mp3;base64,${base64Audio}`;
             resolve({
@@ -685,7 +742,6 @@ exports.main = async (event, context) => {
                 error: 'No audio data received'
             });
         }
-
     } catch (err) {
         console.error('Flow Error:', err);
         ws.close();
