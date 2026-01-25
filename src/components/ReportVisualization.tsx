@@ -1,12 +1,13 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { AreaChart, Area, ResponsiveContainer, Tooltip } from 'recharts';
 import { useMoodStore } from '../store/useMoodStore';
 import { format, parseISO, isWithinInterval, setISOWeek, startOfISOWeek, endOfISOWeek } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { getMoodState } from '../utils/moodUtils';
 import { getHarvestLevel } from '../utils/harvestUtils';
 import clsx from 'clsx';
+import { X } from 'lucide-react';
 
 interface ReportVisualizationProps {
   year: number;
@@ -15,6 +16,7 @@ interface ReportVisualizationProps {
 
 const ReportVisualization: React.FC<ReportVisualizationProps> = ({ year, week }) => {
   const { records } = useMoodStore();
+  const [selectedPoint, setSelectedPoint] = useState<any>(null);
 
   const weekData = useMemo(() => {
     // 1. Get a date within the target week
@@ -60,7 +62,9 @@ const ReportVisualization: React.FC<ReportVisualizationProps> = ({ year, week })
       fullDate: format(parseISO(r.date), 'MM-dd HH:mm'),
       score: r.score,
       mood: r.type === 'harvest' ? getHarvestLevel(r.score).label : getMoodState(r.score).label,
-      emoji: r.type === 'harvest' ? '🌾' : getMoodState(r.score).emoji
+      emoji: r.type === 'harvest' ? '🌾' : getMoodState(r.score).emoji,
+      note: r.note,
+      originalRecord: r
     }));
   }, [weekData]);
 
@@ -78,16 +82,16 @@ const ReportVisualization: React.FC<ReportVisualizationProps> = ({ year, week })
 
   // Dynamic Theme based on average score
   const themeColor = useMemo(() => {
-    if (stats.avg >= 80) return { bg: 'from-amber-50 to-orange-100', text: 'text-orange-900', accent: 'bg-orange-500' };
-    if (stats.avg >= 60) return { bg: 'from-blue-50 to-indigo-100', text: 'text-indigo-900', accent: 'bg-indigo-500' };
-    return { bg: 'from-slate-100 to-zinc-200', text: 'text-slate-800', accent: 'bg-slate-600' };
+    if (stats.avg >= 80) return { bg: 'from-amber-50 to-orange-100', text: 'text-orange-900', accent: 'bg-orange-500', label: 'Radiant', sub: 'Flow' };
+    if (stats.avg >= 60) return { bg: 'from-blue-50 to-indigo-100', text: 'text-indigo-900', accent: 'bg-indigo-500', label: 'Balanced', sub: 'Flow' };
+    return { bg: 'from-slate-100 to-zinc-200', text: 'text-slate-800', accent: 'bg-slate-600', label: 'Quiet', sub: 'Stillness' };
   }, [stats.avg]);
 
   if (weekData.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-slate-400 font-light">
         <div className="text-4xl mb-4 opacity-50">🍃</div>
-        <div className="tracking-widest uppercase text-xs">No Data Recorded</div>
+        <div className="tracking-widest uppercase text-xs">暂无数据记录</div>
       </div>
     );
   }
@@ -106,10 +110,10 @@ const ReportVisualization: React.FC<ReportVisualizationProps> = ({ year, week })
           transition={{ duration: 0.6, ease: "easeOut" }}
           className="flex flex-col items-start"
         >
-          <span className={clsx("text-xs font-bold tracking-[0.2em] uppercase mb-2 opacity-60", themeColor.text)}>Weekly Insight</span>
+          <span className={clsx("text-xs font-bold tracking-[0.2em] uppercase mb-2 opacity-60", themeColor.text)}>周报洞察</span>
           <h2 className={clsx("text-5xl sm:text-6xl font-serif font-medium leading-tight", themeColor.text)}>
-            {stats.avg >= 80 ? "Radiant" : stats.avg >= 60 ? "Balanced" : "Quiet"} <br />
-            <span className="opacity-50 italic">Flow</span>
+            {themeColor.label} <br />
+            <span className="opacity-50 italic">{themeColor.sub}</span>
           </h2>
         </motion.div>
 
@@ -122,7 +126,7 @@ const ReportVisualization: React.FC<ReportVisualizationProps> = ({ year, week })
           <div className={clsx("text-6xl sm:text-7xl font-light tracking-tighter", themeColor.text)}>
             {stats.avg}
           </div>
-          <div className={clsx("text-xs font-medium uppercase tracking-wider opacity-50", themeColor.text)}>Avg Score</div>
+          <div className={clsx("text-xs font-medium uppercase tracking-wider opacity-50", themeColor.text)}>平均分</div>
         </motion.div>
       </div>
 
@@ -137,13 +141,20 @@ const ReportVisualization: React.FC<ReportVisualizationProps> = ({ year, week })
           className="md:col-span-12 lg:col-span-8 bg-white/60 backdrop-blur-xl rounded-2xl p-6 shadow-sm border border-white/50"
         >
           <div className="flex justify-between items-end mb-6">
-            <h3 className={clsx("text-sm font-bold uppercase tracking-widest opacity-70", themeColor.text)}>Emotional Rhythm</h3>
-            <span className={clsx("text-xs opacity-50", themeColor.text)}>{chartData.length} Entries</span>
+            <h3 className={clsx("text-sm font-bold uppercase tracking-widest opacity-70", themeColor.text)}>情绪韵律</h3>
+            <span className={clsx("text-xs opacity-50", themeColor.text)}>{chartData.length} 条记录</span>
           </div>
           
           <div className="h-48 w-full -ml-2">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData}>
+              <AreaChart 
+                data={chartData}
+                onClick={(e) => {
+                  if (e && e.activePayload && e.activePayload.length > 0) {
+                    setSelectedPoint(e.activePayload[0].payload);
+                  }
+                }}
+              >
                 <defs>
                   <linearGradient id="gradientScore" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="currentColor" className={themeColor.text} stopOpacity={0.2}/>
@@ -155,19 +166,19 @@ const ReportVisualization: React.FC<ReportVisualizationProps> = ({ year, week })
                     if (active && payload && payload.length) {
                       const data = payload[0].payload;
                       return (
-                        <div className="bg-white/90 backdrop-blur-md px-4 py-3 rounded-xl shadow-xl border border-white/50 text-xs">
-                          <div className="font-bold text-slate-800 mb-1">{data.fullDate}</div>
-                          <div className="flex items-center gap-2 text-slate-600">
-                            <span className="text-lg">{data.emoji}</span>
-                            <span>{data.score}</span>
+                        <div className="bg-white/95 backdrop-blur-md px-4 py-3 rounded-2xl shadow-xl border border-white/50 text-xs min-w-[120px]">
+                          <div className="font-bold text-slate-800 mb-2 text-center text-[10px] opacity-60 font-mono tracking-tight">{data.fullDate}</div>
+                          <div className="flex items-center justify-center gap-3 text-slate-700">
+                             <span className="text-3xl filter drop-shadow-sm">{data.emoji}</span>
+                             <div className="text-3xl font-light font-serif text-slate-800">{data.score}</div>
                           </div>
-                          <div className="text-slate-400 mt-1 max-w-[120px] truncate">{data.mood}</div>
+                          <div className="text-[10px] text-center text-slate-400 mt-2 scale-90">点击查看详情</div>
                         </div>
                       );
                     }
                     return null;
                   }}
-                  cursor={{ stroke: '#000', strokeWidth: 1, strokeDasharray: '2 4', strokeOpacity: 0.1 }}
+                  cursor={{ stroke: '#000', strokeWidth: 1, strokeDasharray: '2 4', strokeOpacity: 0.2 }}
                 />
                 <Area 
                   type="monotone" 
@@ -177,6 +188,7 @@ const ReportVisualization: React.FC<ReportVisualizationProps> = ({ year, week })
                   strokeWidth={2}
                   fill="url(#gradientScore)" 
                   fillOpacity={1}
+                  activeDot={{ r: 6, strokeWidth: 0, className: "fill-slate-800 animate-pulse" }}
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -195,7 +207,7 @@ const ReportVisualization: React.FC<ReportVisualizationProps> = ({ year, week })
           >
             <div>
               <div className="text-3xl font-light">{stats.count}</div>
-              <div className="text-[10px] uppercase tracking-widest opacity-60">Total Records</div>
+              <div className="text-[10px] uppercase tracking-widest opacity-60">总记录数</div>
             </div>
             <div className="h-10 w-10 rounded-full bg-white/50 flex items-center justify-center text-xl">
               📝
@@ -209,7 +221,7 @@ const ReportVisualization: React.FC<ReportVisualizationProps> = ({ year, week })
             transition={{ delay: 0.5 }}
             className="flex-1 bg-white/60 backdrop-blur-xl rounded-2xl p-6 border border-white/50"
           >
-            <h3 className={clsx("text-sm font-bold uppercase tracking-widest opacity-70 mb-4", themeColor.text)}>Composition</h3>
+            <h3 className={clsx("text-sm font-bold uppercase tracking-widest opacity-70 mb-4", themeColor.text)}>心情构成</h3>
             <div className="space-y-3">
               {moodDist.slice(0, 4).map((item, i) => (
                 <div key={item.name} className="group">
@@ -231,6 +243,66 @@ const ReportVisualization: React.FC<ReportVisualizationProps> = ({ year, week })
           </motion.div>
         </div>
       </div>
+
+      {/* Detail Modal */}
+      <AnimatePresence>
+        {selectedPoint && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setSelectedPoint(null)}
+              className="absolute inset-0 bg-black/20 backdrop-blur-sm"
+            />
+            <motion.div
+              layoutId={`point-${selectedPoint.fullDate}`}
+              className="relative w-full max-w-sm bg-white rounded-3xl shadow-2xl overflow-hidden z-10"
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 10 }}
+            >
+               <div className="p-6">
+                 {/* Header */}
+                 <div className="flex items-center justify-between mb-4">
+                   <div className="flex items-center gap-3">
+                     <span className="text-sm font-bold text-slate-400 font-mono tracking-tight">{selectedPoint.fullDate}</span>
+                   </div>
+                   <div className="flex items-center gap-2">
+                      <span className="text-xs text-slate-400">编辑</span>
+                      <div className={clsx("px-3 py-1 rounded-full text-white font-bold text-sm shadow-sm", 
+                        selectedPoint.score >= 80 ? 'bg-orange-400' : selectedPoint.score >= 60 ? 'bg-indigo-500' : 'bg-slate-600'
+                      )}>
+                        {selectedPoint.score}
+                      </div>
+                   </div>
+                 </div>
+
+                 {/* Mood Label */}
+                 <div className="flex items-center gap-3 mb-6">
+                   <span className="text-4xl filter drop-shadow-sm">{selectedPoint.emoji}</span>
+                   <h3 className="text-2xl font-bold text-slate-800">{selectedPoint.mood.split(' ')[0]}</h3>
+                 </div>
+
+                 {/* Note Content */}
+                 <div className="prose prose-sm prose-slate max-w-none">
+                   <p className="text-slate-600 leading-relaxed text-base font-sans whitespace-pre-wrap">
+                     {selectedPoint.note || selectedPoint.originalRecord?.note || "未添加详细描述..."}
+                   </p>
+                 </div>
+               </div>
+
+               {/* Close Button (Optional, click outside works too) */}
+               <button 
+                 onClick={() => setSelectedPoint(null)}
+                 className="absolute top-4 right-4 p-2 rounded-full bg-slate-100 text-slate-400 opacity-0 hover:opacity-100 transition-opacity"
+               >
+                 <X size={16} />
+               </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

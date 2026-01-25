@@ -38,9 +38,7 @@ export const CalendarPage = () => {
   const dailyStats = useMemo(() => {
     const stats: Record<string, { total: number; count: number; min: number; max: number }> = {};
     records.forEach(r => {
-      // Skip Harvest records - Calendar color is determined by Mood Forest only
-      if (r.type === 'harvest') return;
-
+      // 允许所有类型的记录参与统计（包括 harvest），以确保日历颜色能反映当天最高分
       const dateKey = format(new Date(r.timestamp), 'yyyy-MM-dd');
       if (!stats[dateKey]) stats[dateKey] = { total: 0, count: 0, min: 100, max: 0 };
       stats[dateKey].total += r.score;

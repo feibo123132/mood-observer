@@ -16,7 +16,6 @@ export const HistoryReportsPage = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [retryMode, setRetryMode] = useState(false);
-  const [showVisualModal, setShowVisualModal] = useState(false);
 
   const handleGeneratePodcast = async (content: string, year: number, week: number) => {
     if (isGenerating) return;
@@ -217,7 +216,7 @@ export const HistoryReportsPage = () => {
                          </div>
                          <div className="flex-1">
                            <div className={`text-sm font-medium ${retryMode ? 'text-orange-600' : 'text-slate-700 group-hover:text-blue-700'}`}>
-                             {isGenerating ? '处理中...' : (retryMode ? '点击获取结果' : '报告朗读')}
+                             {isGenerating ? '处理中...' : (retryMode ? '点击获取结果' : '双人播客')}
                            </div>
                            <div className="text-[10px] text-slate-400 mt-0.5">
                              {retryMode ? '后台生成中' : '语音播报'}
@@ -228,7 +227,7 @@ export const HistoryReportsPage = () => {
                        {/* Feature 2: Content Visualization */}
                        <button 
                          className="flex items-center gap-3 p-3 rounded-xl bg-white shadow-sm hover:shadow-md hover:bg-purple-50 transition-all group text-left"
-                         onClick={() => setShowVisualModal(true)}
+                         onClick={() => selectedReport && navigate(`/report-visualization/${selectedReport.year}/${selectedReport.week}`)}
                        >
                          <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center text-purple-600 group-hover:scale-110 transition-transform">
                            <PieChart size={16} />
@@ -284,47 +283,6 @@ export const HistoryReportsPage = () => {
               <p className="text-xs text-slate-400 mt-4 text-center">
                 由豆包语音模型生成
               </p>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-      {/* Visualization Modal */}
-      <AnimatePresence>
-        {showVisualModal && selectedReport && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowVisualModal(false)}
-              className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-            />
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl p-6 z-10 max-h-[80vh] overflow-y-auto"
-            >
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-2">
-                   <div className="p-2 bg-purple-100 text-purple-600 rounded-lg">
-                     <PieChart size={20} />
-                   </div>
-                   <div>
-                     <h3 className="font-bold text-slate-800">周报深度分析</h3>
-                     <p className="text-xs text-slate-400">{selectedReport.date.replace('第', '第 ')}</p>
-                   </div>
-                </div>
-                <button 
-                  onClick={() => setShowVisualModal(false)}
-                  className="p-2 hover:bg-slate-100 rounded-full text-slate-500 transition-colors"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-              
-              <ReportVisualization year={selectedReport.year} week={selectedReport.week} />
-              
             </motion.div>
           </div>
         )}

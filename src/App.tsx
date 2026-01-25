@@ -5,6 +5,7 @@ import { LoginPage } from './pages/LoginPage';
 import { ReviewPage } from './pages/ReviewPage';
 import { TrashPage } from './pages/TrashPage';
 import { HistoryReportsPage } from './pages/HistoryReportsPage';
+import { ReportVisualizationPage } from './pages/ReportVisualizationPage';
 import { RequireAuth } from './components/RequireAuth';
 import { useEffect } from 'react';
 import { useAuthStore } from './store/useAuthStore';
@@ -59,6 +60,11 @@ function App() {
         <Route path="/reports" element={
           <RequireAuth>
             <HistoryReportsPage />
+          </RequireAuth>
+        } />
+        <Route path="/report-visualization/:year/:week" element={
+          <RequireAuth>
+            <ReportVisualizationPage />
           </RequireAuth>
         } />
         <Route path="/login" element={<LoginPage />} />
