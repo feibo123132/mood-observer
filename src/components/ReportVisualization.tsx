@@ -14,6 +14,15 @@ interface ReportVisualizationProps {
   week: number;
 }
 
+interface ExtendedMoodRecord {
+  id: string;
+  timestamp: number;
+  score: number;
+  note: string;
+  type?: 'mood' | 'harvest';
+  date: string;
+}
+
 const ReportVisualization: React.FC<ReportVisualizationProps> = ({ year, week }) => {
   const { records } = useMoodStore();
   const [selectedPoint, setSelectedPoint] = useState<any>(null);
@@ -28,6 +37,7 @@ const ReportVisualization: React.FC<ReportVisualizationProps> = ({ year, week })
 
     // 3. Filter using the correct interval
     const filtered = records.filter(r => {
+      // @ts-ignore
       let dateStr = r.date;
       if (!dateStr && r.timestamp) {
         dateStr = new Date(r.timestamp).toISOString();
@@ -36,8 +46,9 @@ const ReportVisualization: React.FC<ReportVisualizationProps> = ({ year, week })
       return isWithinInterval(parseISO(dateStr), { start: weekStart, end: weekEnd });
     }).map(r => ({
       ...r,
+      // @ts-ignore
       date: r.date || new Date(r.timestamp).toISOString()
-    }));
+    })) as ExtendedMoodRecord[];
 
     return filtered.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   }, [records, year, week]);
@@ -150,7 +161,7 @@ const ReportVisualization: React.FC<ReportVisualizationProps> = ({ year, week })
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart 
                 data={chartData}
-                onClick={(e) => {
+                onClick={(e: any) => {
                   // Robust click handling: check activePayload
                   if (e && e.activePayload && e.activePayload.length > 0) {
                     setSelectedPoint(e.activePayload[0].payload);
@@ -201,7 +212,7 @@ const ReportVisualization: React.FC<ReportVisualizationProps> = ({ year, week })
                   fill="url(#gradientScore)" 
                   fillOpacity={1}
                   activeDot={{ r: 6, strokeWidth: 0, className: "fill-slate-800 animate-pulse cursor-pointer" }}
-                  onClick={(data, index, e) => {
+                  onClick={(data: any, index: number, e: any) => {
                      // Additional click handler on the Area itself
                      // Note: Recharts Area onClick passes (data, index, event) where data is the point data
                      // But sometimes data is null depending on version. 

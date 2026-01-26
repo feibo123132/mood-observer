@@ -11,7 +11,7 @@ import ReportVisualization from '../components/ReportVisualization';
 export const HistoryReportsPage = () => {
   const navigate = useNavigate();
   const { reports, deleteReport } = useMoodStore();
-  const [selectedReport, setSelectedReport] = useState<{key: string, content: string, date: string} | null>(null);
+  const [selectedReport, setSelectedReport] = useState<{key: string, content: string, date: string, year: number, week: number} | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);

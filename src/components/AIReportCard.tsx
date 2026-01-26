@@ -164,6 +164,7 @@ export const AIReportCard = ({ moodScores, notes, types = [], weekNumber, year }
       {/* Report Modal */}
       {isModalOpen && (
         <AIReportModal
+          isOpen={isModalOpen}
           moodScores={moodScores}
           notes={notes}
           types={types}
