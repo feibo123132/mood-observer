@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { useMoodStore } from '../store/useMoodStore';
 import { format, getWeek, startOfWeek, endOfWeek } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
-import { FileText, ArrowLeft, Calendar, Trash2, Brain, PanelRight, Volume2, PieChart, Loader2, X } from 'lucide-react';
+import { FileText, ArrowLeft, Calendar, Trash2, Brain, PanelRight, Volume2, PieChart, Loader2, X, LayoutTemplate } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { app } from '../lib/cloudbase';
@@ -16,6 +16,11 @@ export const HistoryReportsPage = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [retryMode, setRetryMode] = useState(false);
+
+  // New states for Content Visualization
+  const [isDesigning, setIsDesigning] = useState(false);
+  const [designRetryMode, setDesignRetryMode] = useState(false);
+  const [reportHtml, setReportHtml] = useState<string | null>(null);
 
   const handleGeneratePodcast = async (content: string, year: number, week: number) => {
     if (isGenerating) return;
@@ -52,6 +57,57 @@ export const HistoryReportsPage = () => {
       }
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const handleDesignReport = async (content: string, year: number, week: number) => {
+    if (isDesigning) return;
+    setIsDesigning(true);
+    try {
+      await app.auth().signInAnonymously();
+
+      // If in retry mode, pass checkOnly: true to avoid burning API quota
+      const res = await app.callFunction({
+        name: 'designReport',
+        data: { 
+          reportText: content, 
+          year, 
+          week,
+          checkOnly: designRetryMode // Only check DB if we are retrying
+        }
+      });
+
+      // @ts-ignore
+      if (res.result?.success && res.result?.html) {
+        // @ts-ignore
+        setReportHtml(res.result.html);
+        setDesignRetryMode(false);
+      } else {
+        // Handle "Not Found" specifically for checkOnly mode
+        // @ts-ignore
+        if (designRetryMode && res.result?.status === 'pending') {
+          if (window.confirm('后台仍在生成或已失败，暂未找到结果。\n\n是否重新开始生成？(将消耗API额度)')) {
+            setDesignRetryMode(false); // Reset retry mode to force generation next time
+            // Ideally we could auto-trigger here, but letting user click again is safer
+          }
+        } else {
+          // @ts-ignore
+          alert('生成失败: ' + (res.result?.error || '未知错误'));
+        }
+      }
+    } catch (error: any) {
+      console.error('Design generation failed:', error);
+      let errorMsg = error.message || '未知错误';
+
+      // Handle Timeout / Network Error (504)
+      if (errorMsg.includes('timeout') || errorMsg.includes('network') || errorMsg.includes('504')) {
+        setDesignRetryMode(true);
+        alert('请求超时（后台仍在运行），请稍等片刻后点击“点击获取结果”按钮即可查看。');
+      } else {
+        alert('生成出错: ' + errorMsg);
+      }
+    } finally {
+      setIsDesigning(false);
     }
   };
 
@@ -224,7 +280,7 @@ export const HistoryReportsPage = () => {
                          </div>
                        </button>
 
-                       {/* Feature 2: Content Visualization */}
+                       {/* Feature 2: Data Template */}
                        <button 
                          className="flex items-center gap-3 p-3 rounded-xl bg-white shadow-sm hover:shadow-md hover:bg-purple-50 transition-all group text-left"
                          onClick={() => selectedReport && navigate(`/report-visualization/${selectedReport.year}/${selectedReport.week}`)}
@@ -233,8 +289,27 @@ export const HistoryReportsPage = () => {
                            <PieChart size={16} />
                          </div>
                          <div className="flex-1">
-                           <div className="text-sm font-medium text-slate-700 group-hover:text-purple-700">内容可视化</div>
+                           <div className="text-sm font-medium text-slate-700 group-hover:text-purple-700">数据样板</div>
                            <div className="text-[10px] text-slate-400 mt-0.5">图表分析</div>
+                         </div>
+                       </button>
+
+                       {/* Feature 3: Content Visualization */}
+                       <button 
+                         className="flex items-center gap-3 p-3 rounded-xl bg-white shadow-sm hover:shadow-md hover:bg-pink-50 transition-all group text-left disabled:opacity-50"
+                         onClick={() => selectedReport && handleDesignReport(selectedReport.content, selectedReport.year, selectedReport.week)}
+                         disabled={isDesigning || isGenerating}
+                       >
+                         <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-transform ${isDesigning ? 'bg-pink-100 text-pink-600' : 'bg-pink-100 text-pink-600 group-hover:scale-110'}`}>
+                           {isDesigning ? <Loader2 size={16} className="animate-spin" /> : <LayoutTemplate size={16} />}
+                         </div>
+                         <div className="flex-1">
+                           <div className={`text-sm font-medium ${designRetryMode ? 'text-orange-600' : 'text-slate-700 group-hover:text-pink-700'}`}>
+                             {isDesigning ? '设计中...' : (designRetryMode ? '点击获取结果' : '内容可视化')}
+                           </div>
+                           <div className="text-[10px] text-slate-400 mt-0.5">
+                             {isDesigning ? 'AI正在绘图' : (designRetryMode ? '后台生成中' : '创意展示')}
+                           </div>
                          </div>
                        </button>
                     </motion.div>
@@ -283,6 +358,51 @@ export const HistoryReportsPage = () => {
               <p className="text-xs text-slate-400 mt-4 text-center">
                 由豆包语音模型生成
               </p>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* New: Content Visualization Modal */}
+      <AnimatePresence>
+        {reportHtml && (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setReportHtml(null)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-md"
+            />
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              className="relative w-full max-w-6xl h-[85vh] bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col z-10"
+            >
+              <div className="flex items-center justify-between p-4 border-b border-slate-100">
+                <div className="flex items-center gap-2">
+                   <div className="p-2 bg-pink-100 text-pink-600 rounded-lg">
+                     <LayoutTemplate size={20} />
+                   </div>
+                   <h3 className="font-bold text-slate-800">内容可视化报告</h3>
+                </div>
+                <button 
+                  onClick={() => setReportHtml(null)}
+                  className="p-2 hover:bg-slate-100 rounded-full text-slate-500 transition-colors"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              
+              <div className="flex-1 bg-slate-100 overflow-hidden relative">
+                 <iframe 
+                   srcDoc={reportHtml}
+                   className="w-full h-full border-0"
+                   sandbox="allow-scripts allow-same-origin allow-popups"
+                   title="Report Visualization"
+                 />
+              </div>
             </motion.div>
           </div>
         )}

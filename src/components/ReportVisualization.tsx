@@ -62,7 +62,8 @@ const ReportVisualization: React.FC<ReportVisualizationProps> = ({ year, week })
       fullDate: format(parseISO(r.date), 'MM-dd HH:mm'),
       score: r.score,
       mood: r.type === 'harvest' ? getHarvestLevel(r.score).label : getMoodState(r.score).label,
-      emoji: r.type === 'harvest' ? '🌾' : getMoodState(r.score).emoji,
+      // FIXED: Always use mood emoji based on score, ignoring harvest type (no wheat icon)
+      emoji: getMoodState(r.score).emoji,
       note: r.note,
       originalRecord: r
     }));
@@ -145,11 +146,12 @@ const ReportVisualization: React.FC<ReportVisualizationProps> = ({ year, week })
             <span className={clsx("text-xs opacity-50", themeColor.text)}>{chartData.length} 条记录</span>
           </div>
           
-          <div className="h-48 w-full -ml-2">
+          <div className="h-48 w-full -ml-2 cursor-pointer">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart 
                 data={chartData}
                 onClick={(e) => {
+                  // Robust click handling: check activePayload
                   if (e && e.activePayload && e.activePayload.length > 0) {
                     setSelectedPoint(e.activePayload[0].payload);
                   }
@@ -162,23 +164,33 @@ const ReportVisualization: React.FC<ReportVisualizationProps> = ({ year, week })
                   </linearGradient>
                 </defs>
                 <Tooltip 
+                  trigger="hover" // Ensure hover triggers tooltip, but click triggers modal
                   content={({ active, payload }) => {
                     if (active && payload && payload.length) {
                       const data = payload[0].payload;
+                      const noteText = data.note || data.originalRecord?.note || "";
                       return (
-                        <div className="bg-white/95 backdrop-blur-md px-4 py-3 rounded-2xl shadow-xl border border-white/50 text-xs min-w-[120px]">
+                        <div className="bg-white/95 backdrop-blur-md px-4 py-3 rounded-2xl shadow-xl border border-white/50 text-xs min-w-[180px] max-w-[320px] transition-all duration-200">
                           <div className="font-bold text-slate-800 mb-2 text-center text-[10px] opacity-60 font-mono tracking-tight">{data.fullDate}</div>
-                          <div className="flex items-center justify-center gap-3 text-slate-700">
+                          <div className="flex items-center justify-center gap-3 text-slate-700 mb-3">
                              <span className="text-3xl filter drop-shadow-sm">{data.emoji}</span>
                              <div className="text-3xl font-light font-serif text-slate-800">{data.score}</div>
                           </div>
-                          <div className="text-[10px] text-center text-slate-400 mt-2 scale-90">点击查看详情</div>
+                          
+                          {/* Note Preview - Dynamic height */}
+                          {noteText && (
+                            <div className="bg-slate-50 rounded-xl p-3 text-slate-600 leading-relaxed text-[11px] border border-slate-100 break-words whitespace-pre-wrap">
+                              {noteText}
+                            </div>
+                          )}
                         </div>
                       );
                     }
                     return null;
                   }}
                   cursor={{ stroke: '#000', strokeWidth: 1, strokeDasharray: '2 4', strokeOpacity: 0.2 }}
+                  // Increase z-index to ensure it floats above everything
+                  wrapperStyle={{ zIndex: 50 }}
                 />
                 <Area 
                   type="monotone" 
@@ -188,7 +200,19 @@ const ReportVisualization: React.FC<ReportVisualizationProps> = ({ year, week })
                   strokeWidth={2}
                   fill="url(#gradientScore)" 
                   fillOpacity={1}
-                  activeDot={{ r: 6, strokeWidth: 0, className: "fill-slate-800 animate-pulse" }}
+                  activeDot={{ r: 6, strokeWidth: 0, className: "fill-slate-800 animate-pulse cursor-pointer" }}
+                  onClick={(data, index, e) => {
+                     // Additional click handler on the Area itself
+                     // Note: Recharts Area onClick passes (data, index, event) where data is the point data
+                     // But sometimes data is null depending on version. 
+                     // The chart-level onClick is usually more reliable for activePayload.
+                     // We keep this just in case.
+                     if (data && data.payload) {
+                        setSelectedPoint(data.payload);
+                        // Stop propagation to prevent double trigger if chart onClick also fires
+                        if (e && e.stopPropagation) e.stopPropagation();
+                     }
+                  }}
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -262,43 +286,62 @@ const ReportVisualization: React.FC<ReportVisualizationProps> = ({ year, week })
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 10 }}
             >
-               <div className="p-6">
-                 {/* Header */}
-                 <div className="flex items-center justify-between mb-4">
-                   <div className="flex items-center gap-3">
-                     <span className="text-sm font-bold text-slate-400 font-mono tracking-tight">{selectedPoint.fullDate}</span>
+               {/* New Modal Design */}
+               {/* 1. Colored Header */}
+               <div className={clsx("w-full p-8 flex flex-col items-center justify-center relative text-white transition-colors duration-300", 
+                  selectedPoint.score >= 96 ? 'bg-yellow-500' :
+                  selectedPoint.score >= 90 ? 'bg-purple-500' :
+                  selectedPoint.score >= 80 ? 'bg-blue-500' :
+                  selectedPoint.score >= 70 ? 'bg-green-500' :
+                  selectedPoint.score >= 60 ? 'bg-emerald-400' :
+                  selectedPoint.score >= 50 ? 'bg-teal-200' : 'bg-slate-400'
+               )}>
+                 <div className="text-6xl font-bold mb-2">{selectedPoint.score}</div>
+                 <div className="flex items-center gap-2 opacity-90">
+                   <span className="text-xl">{selectedPoint.emoji}</span>
+                   <span className="text-lg font-medium">{selectedPoint.mood.split(' ')[0]}</span>
+                 </div>
+                 
+                 {/* Close Button */}
+                 <button 
+                   onClick={() => setSelectedPoint(null)}
+                   className="absolute top-4 right-4 p-2 rounded-full bg-white/20 hover:bg-white/30 transition-colors backdrop-blur-sm"
+                 >
+                   <X size={20} className="text-white" />
+                 </button>
+               </div>
+
+               {/* 2. Content Body */}
+               <div className="p-6 bg-slate-50">
+                 {/* Date & Time Row */}
+                 <div className="flex items-center justify-between text-slate-400 text-sm mb-6 px-1">
+                   <div className="flex items-center gap-2">
+                     <span className="w-4 h-4 flex items-center justify-center opacity-70">📅</span>
+                     <span>{selectedPoint.fullDate.split(' ')[0]}</span>
                    </div>
                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-slate-400">编辑</span>
-                      <div className={clsx("px-3 py-1 rounded-full text-white font-bold text-sm shadow-sm", 
-                        selectedPoint.score >= 80 ? 'bg-orange-400' : selectedPoint.score >= 60 ? 'bg-indigo-500' : 'bg-slate-600'
-                      )}>
-                        {selectedPoint.score}
-                      </div>
+                     <span className="w-4 h-4 flex items-center justify-center opacity-70">🕒</span>
+                     <span>{selectedPoint.fullDate.split(' ')[1]}</span>
                    </div>
                  </div>
 
-                 {/* Mood Label */}
-                 <div className="flex items-center gap-3 mb-6">
-                   <span className="text-4xl filter drop-shadow-sm">{selectedPoint.emoji}</span>
-                   <h3 className="text-2xl font-bold text-slate-800">{selectedPoint.mood.split(' ')[0]}</h3>
+                 {/* Note Label */}
+                 <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 pl-1">
+                   笔记 / 评论
                  </div>
 
-                 {/* Note Content */}
-                 <div className="prose prose-sm prose-slate max-w-none">
+                 {/* Note Content Card */}
+                 <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 min-h-[120px]">
                    <p className="text-slate-600 leading-relaxed text-base font-sans whitespace-pre-wrap">
                      {selectedPoint.note || selectedPoint.originalRecord?.note || "未添加详细描述..."}
                    </p>
                  </div>
+                 
+                 {/* Word Count (Optional Detail) */}
+                 <div className="text-right mt-3 text-xs text-slate-300 font-mono">
+                   {(selectedPoint.note || selectedPoint.originalRecord?.note || "").length}/300
+                 </div>
                </div>
-
-               {/* Close Button (Optional, click outside works too) */}
-               <button 
-                 onClick={() => setSelectedPoint(null)}
-                 className="absolute top-4 right-4 p-2 rounded-full bg-slate-100 text-slate-400 opacity-0 hover:opacity-100 transition-opacity"
-               >
-                 <X size={16} />
-               </button>
             </motion.div>
           </div>
         )}

@@ -1,3 +1,12 @@
 {
-  "envId": "jieyou-3gr01mvob9ad92de"
+  "envId": "jieyou-3gr01mvob9ad92de",
+  "functionRoot": "./cloudfunctions",
+  "functions": [
+    {
+      "name": "designReport",
+      "timeout": 180,
+      "runtime": "Nodejs16.13",
+      "memorySize": 512
+    }
+  ]
 }
