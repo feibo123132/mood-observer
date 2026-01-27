@@ -3,7 +3,9 @@ export interface MoodRecord {
   timestamp: number;
   score: number; // 0-100. For harvest: 0, 25, 50, 75, 100
   note: string;
+  images?: string[]; // Array of CloudBase FileIDs
   type?: 'mood' | 'harvest';
+  date?: string; // ISO date string for compatibility
   deletedAt?: number;
 }
 

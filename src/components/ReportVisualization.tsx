@@ -212,18 +212,6 @@ const ReportVisualization: React.FC<ReportVisualizationProps> = ({ year, week })
                   fill="url(#gradientScore)" 
                   fillOpacity={1}
                   activeDot={{ r: 6, strokeWidth: 0, className: "fill-slate-800 animate-pulse cursor-pointer" }}
-                  onClick={(data: any, index: number, e: any) => {
-                     // Additional click handler on the Area itself
-                     // Note: Recharts Area onClick passes (data, index, event) where data is the point data
-                     // But sometimes data is null depending on version. 
-                     // The chart-level onClick is usually more reliable for activePayload.
-                     // We keep this just in case.
-                     if (data && data.payload) {
-                        setSelectedPoint(data.payload);
-                        // Stop propagation to prevent double trigger if chart onClick also fires
-                        if (e && e.stopPropagation) e.stopPropagation();
-                     }
-                  }}
                 />
               </AreaChart>
             </ResponsiveContainer>
