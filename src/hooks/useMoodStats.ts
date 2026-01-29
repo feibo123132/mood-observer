@@ -44,13 +44,11 @@ export const useMoodStats = ({ sortBy, dateRange }: UseMoodStatsProps) => {
     };
 
     const harvestPriority: Record<string, number> = {
-      '😎 史诗': 100,
-      '😍 传说': 90,
-      '🤩 完美': 80,
-      '😃 卓越': 70,
-      '🙂 稀有': 60,
-      '😌 精良': 50,
-      '😐 普通': 40
+      '😍 传说': 100,
+      '😃 史诗': 90,
+      '🙂 稀有': 80,
+      '😌 精良': 70,
+      '😐 普通': 60
     };
 
     activeRecords.forEach(record => {

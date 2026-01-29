@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MoodSphere } from '../components/MoodSphere';
 import { MoodSlider } from '../components/MoodSlider';
@@ -18,7 +18,8 @@ export const HomePage = () => {
     setCurrentScore, 
     lastVisitDate, 
     setTodayBaseline, 
-    addRecord 
+    addRecord,
+    records 
   } = useMoodStore();
 
   const { user, initAuth, logout } = useAuthStore();
@@ -29,6 +30,23 @@ export const HomePage = () => {
   const [harvestNote, setHarvestNote] = useState('');
   const [recordScore, setRecordScore] = useState(currentScore);
   const [recordType, setRecordType] = useState<'mood' | 'harvest'>('mood');
+
+  // Calculate display score (highest score of today)
+  const displayScore = useMemo(() => {
+    const now = new Date();
+    const todayRecords = records.filter(r => {
+      const rDate = new Date(r.timestamp);
+      return rDate.getDate() === now.getDate() &&
+             rDate.getMonth() === now.getMonth() &&
+             rDate.getFullYear() === now.getFullYear();
+    });
+
+    if (todayRecords.length === 0) {
+      return currentScore;
+    }
+
+    return Math.max(...todayRecords.map(r => r.score));
+  }, [records, currentScore]);
 
   // Initialize auth on mount
   useEffect(() => {
@@ -178,7 +196,7 @@ export const HomePage = () => {
 
       {/* Main Content Area */}
           <div className="flex-1 flex flex-col items-center justify-center w-full max-w-md z-10 min-h-[60vh]">
-            <MoodSphere score={currentScore} size={320} />
+            <MoodSphere score={displayScore} size={320} />
             
             <div className="flex flex-col items-center gap-12 mt-24">
                <button 
