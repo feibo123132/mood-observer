@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, BarChart2, LogOut, Menu, Volume2, VolumeX, Music, Trash2 } from 'lucide-react';
+import { Calendar, BarChart2, LogOut, Menu, Volume2, VolumeX, Music, Trash2, Box } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -80,6 +80,14 @@ export const UserMenu = () => {
                 >
                   <BarChart2 size={18} className="text-slate-400" />
                   情绪回顾
+                </button>
+
+                <button
+                  onClick={() => handleNavigate('/treasure-box')}
+                  className="w-full px-4 py-3 text-left text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-3 transition-colors"
+                >
+                  <Box size={18} className="text-slate-400" />
+                  百宝箱
                 </button>
                 
                 <button

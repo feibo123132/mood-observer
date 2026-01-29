@@ -9,6 +9,19 @@ export interface MoodRecord {
   deletedAt?: number;
 }
 
+export interface SurgeryRecord {
+  id: string;
+  timestamp: number;
+  trouble: string; // The initial automatic thought
+  evidence: { support: string; against: string };
+  alternative: string;
+  implication: string;
+  utility: string;
+  distancing: string;
+  plan: string;
+  newThought: string; // The result/conclusion
+}
+
 export interface DailySummary {
   date: string; // YYYY-MM-DD
   averageScore: number;

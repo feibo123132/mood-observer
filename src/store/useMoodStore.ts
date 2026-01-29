@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { MoodRecord } from '../types';
+import { MoodRecord, SurgeryRecord } from '../types';
 import { db, auth } from '../lib/cloudbase';
 
 interface MoodState {
@@ -12,7 +12,9 @@ interface MoodState {
   setTodayBaseline: (score: number) => void;
   
   records: MoodRecord[];
+  surgeryRecords: SurgeryRecord[];
   addRecord: (record: Omit<MoodRecord, 'id' | 'timestamp'>) => Promise<void>;
+  addSurgeryRecord: (record: Omit<SurgeryRecord, 'id' | 'timestamp'>) => Promise<void>;
   deleteRecord: (id: string) => Promise<void>;
   deleteMultipleRecords: (ids: string[]) => Promise<void>;
   restoreRecord: (id: string) => Promise<void>;
@@ -52,6 +54,7 @@ export const useMoodStore = create<MoodState>()(
       }),
       
       records: [],
+      surgeryRecords: [],
       
       isSyncing: false,
 
@@ -71,6 +74,7 @@ export const useMoodStore = create<MoodState>()(
         todayBaseline: null,
         lastVisitDate: null,
         records: [],
+        surgeryRecords: [],
         isSyncing: false,
         reports: {}
       }),
@@ -196,6 +200,39 @@ export const useMoodStore = create<MoodState>()(
             });
           } catch (err) {
             console.error('Upload record failed:', err);
+          }
+        }
+      },
+
+      addSurgeryRecord: async (record) => {
+        const id = crypto.randomUUID();
+        const timestamp = Date.now();
+        const newRecord: SurgeryRecord = { ...record, id, timestamp };
+
+        set((state) => ({
+          surgeryRecords: [newRecord, ...state.surgeryRecords]
+        }));
+        
+        // 格式化日期辅助函数
+        const formatDate = (timestamp: number) => {
+          const d = new Date(timestamp);
+          const pad = (n: number) => n.toString().padStart(2, '0');
+          return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+        };
+
+        // Sync to cloud (Optional: create a new collection 'surgery_records')
+        const currentEmail = localStorage.getItem('mood_user_email');
+        if (currentEmail) {
+          try {
+             // Check if collection exists or just use a new one. 
+             // For now, let's assume 'surgery_records' collection exists or is auto-created.
+             await db.collection('surgery_records').add({
+               ...newRecord,
+               userId: currentEmail,
+               createTime: formatDate(timestamp)
+             });
+          } catch (err) {
+            console.error('Upload surgery record failed:', err);
           }
         }
       },

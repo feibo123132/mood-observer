@@ -6,6 +6,9 @@ import { ReviewPage } from './pages/ReviewPage';
 import { TrashPage } from './pages/TrashPage';
 import { HistoryReportsPage } from './pages/HistoryReportsPage';
 import { ReportVisualizationPage } from './pages/ReportVisualizationPage';
+import { TreasureBoxPage } from './pages/TreasureBoxPage';
+import { TroubleSurgeryPage } from './pages/TroubleSurgeryPage';
+import { SurgeryHistoryPage } from './pages/SurgeryHistoryPage';
 import { RequireAuth } from './components/RequireAuth';
 import { useEffect } from 'react';
 import { useAuthStore } from './store/useAuthStore';
@@ -65,6 +68,21 @@ function App() {
         <Route path="/report-visualization/:year/:week" element={
           <RequireAuth>
             <ReportVisualizationPage />
+          </RequireAuth>
+        } />
+        <Route path="/treasure-box" element={
+          <RequireAuth>
+            <TreasureBoxPage />
+          </RequireAuth>
+        } />
+        <Route path="/treasure-box/trouble-surgery" element={
+          <RequireAuth>
+            <TroubleSurgeryPage />
+          </RequireAuth>
+        } />
+        <Route path="/treasure-box/surgery-history" element={
+          <RequireAuth>
+            <SurgeryHistoryPage />
           </RequireAuth>
         } />
         <Route path="/login" element={<LoginPage />} />
