@@ -14,14 +14,16 @@ import { useEffect } from 'react';
 import { useAuthStore } from './store/useAuthStore';
 
 import { useMoodStore } from './store/useMoodStore';
+import { useSurgeryStore } from './store/useSurgeryStore';
 
 function App() {
   const initAuth = useAuthStore(state => state.initAuth);
+  const user = useAuthStore(state => state.user);
 
   useEffect(() => {
     initAuth();
 
-    // 一次性数据清洗逻辑 (Auto-Cleanup)
+    // 1. Mood Store Auto-Cleanup (自动清理重复数据)
     const cleanupStore = () => {
       const { records } = useMoodStore.getState();
       const uniqueMap = new Map();
@@ -35,7 +37,42 @@ function App() {
       }
     };
     cleanupStore();
+
+    // 2. Surgery Store Migration (数据迁移 - 一次性逻辑)
+    const migrateSurgeryData = async () => {
+      // @ts-ignore: 忽略类型检查，因为 surgeryRecords 可能已从类型定义中移除
+      const moodStore = useMoodStore.getState() as any;
+      const surgeryStore = useSurgeryStore.getState();
+
+      // Check if old data exists in MoodStore
+      if (moodStore.surgeryRecords && moodStore.surgeryRecords.length > 0) {
+        console.log(`[Migration] Found ${moodStore.surgeryRecords.length} surgery records in MoodStore. Migrating...`);
+        
+        // Add to new store
+        for (const record of moodStore.surgeryRecords) {
+           // 注意：这里最好保留原始 timestamp，如果 addRecord 会重置时间，建议后续优化
+           await surgeryStore.addRecord(record);
+        }
+
+        // Clear old store to prevent re-migration
+        useMoodStore.setState({ surgeryRecords: [] } as any);
+        console.log('[Migration] Migration completed. Old records cleared.');
+      }
+    };
+    migrateSurgeryData();
+
   }, [initAuth]);
+
+  // Sync when user changes (用户登录后同步数据)
+  useEffect(() => {
+    if (user) {
+      // 核心修复：同时同步两个 Store 的数据
+      Promise.all([
+        useMoodStore.getState().syncFromCloud(),
+        useSurgeryStore.getState().syncFromCloud()
+      ]).catch(console.error);
+    }
+  }, [user]);
 
   return (
     <Router>

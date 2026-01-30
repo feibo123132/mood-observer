@@ -1,22 +1,32 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, ChevronLeft, ChevronRight, Calendar as CalendarIcon, FileText } from 'lucide-react';
-import { useMoodStore } from '../store/useMoodStore';
-import { SurgeryRecord } from '../types';
+import { ArrowLeft, ChevronLeft, ChevronRight, Calendar as CalendarIcon, FileText, RefreshCw } from 'lucide-react';
+import { useSurgeryStore } from '../store/useSurgeryStore';
 
 export const SurgeryHistoryPage = () => {
   const navigate = useNavigate();
-  const { surgeryRecords } = useMoodStore();
+  
+  // 使用 Selector 模式确保状态更新响应
+  const surgeryRecords = useSurgeryStore((state) => state.records);
+  const syncFromCloud = useSurgeryStore((state) => state.syncFromCloud);
+  const isSyncing = useSurgeryStore((state) => state.isSyncing);
+  
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
 
-  // Helper to get days in month
+  useEffect(() => {
+    syncFromCloud();
+  }, []);
+
+  const getDateKey = (date: Date) => {
+    return `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
+  };
+
   const getDaysInMonth = (year: number, month: number) => {
     return new Date(year, month + 1, 0).getDate();
   };
 
-  // Helper to get day of week for first day of month (0-6, 0=Sunday)
   const getFirstDayOfMonth = (year: number, month: number) => {
     return new Date(year, month, 1).getDay();
   };
@@ -24,37 +34,46 @@ export const SurgeryHistoryPage = () => {
   const daysInMonth = getDaysInMonth(currentDate.getFullYear(), currentDate.getMonth());
   const firstDay = getFirstDayOfMonth(currentDate.getFullYear(), currentDate.getMonth());
 
-  // Generate calendar grid
   const calendarDays = useMemo(() => {
     const days = [];
-    // Padding for previous month
     for (let i = 0; i < firstDay; i++) {
       days.push(null);
     }
-    // Days of current month
     for (let i = 1; i <= daysInMonth; i++) {
       days.push(new Date(currentDate.getFullYear(), currentDate.getMonth(), i));
     }
     return days;
   }, [currentDate, daysInMonth, firstDay]);
 
-  // Group records by date string (YYYY-MM-DD) for easy lookup
   const recordsByDate = useMemo(() => {
-    const map = new Map<string, SurgeryRecord[]>();
-    surgeryRecords.forEach(record => {
-      const dateStr = new Date(record.timestamp).toDateString();
-      if (!map.has(dateStr)) {
-        map.set(dateStr, []);
+    const safeRecords = Array.isArray(surgeryRecords) ? surgeryRecords : [];
+    const map = new Map<string, any[]>();
+    
+    safeRecords.forEach(record => {
+      let ts = Number(record.timestamp);
+      if (!ts || isNaN(ts)) {
+        if (record.createTime) {
+          ts = new Date(record.createTime).getTime();
+        } else {
+          ts = Date.now();
+        }
       }
-      map.get(dateStr)?.push(record);
+      const dateObj = new Date(ts);
+      const key = getDateKey(dateObj); 
+      
+      if (!map.has(key)) {
+        map.set(key, []);
+      }
+      map.get(key)?.push(record);
     });
+    
     return map;
   }, [surgeryRecords]);
 
-  // Selected date's records
   const selectedRecords = useMemo(() => {
     if (!selectedDate) return [];
-    return recordsByDate.get(selectedDate.toDateString()) || [];
+    const key = getDateKey(selectedDate);
+    return recordsByDate.get(key) || [];
   }, [selectedDate, recordsByDate]);
 
   const changeMonth = (delta: number) => {
@@ -62,34 +81,39 @@ export const SurgeryHistoryPage = () => {
   };
 
   const isSameDay = (d1: Date, d2: Date) => {
-    return d1.getFullYear() === d2.getFullYear() &&
-           d1.getMonth() === d2.getMonth() &&
-           d1.getDate() === d2.getDate();
+    return getDateKey(d1) === getDateKey(d2);
   };
 
   const hasRecord = (date: Date) => {
-    return recordsByDate.has(date.toDateString());
+    return recordsByDate.has(getDateKey(date));
   };
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center relative overflow-hidden">
       
       {/* Header */}
-      <div className="w-full max-w-md p-6 flex items-center gap-4 z-10 bg-slate-50">
+      <div className="w-full max-w-md p-6 flex items-center justify-between gap-4 z-10 bg-slate-50">
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={() => navigate('/treasure-box')}
+            className="p-2 -ml-2 rounded-full hover:bg-slate-100 transition-colors text-slate-600"
+          >
+            <ArrowLeft size={24} />
+          </button>
+          <h1 className="text-xl font-medium text-slate-800">手术记录本</h1>
+        </div>
         <button 
-          onClick={() => navigate('/treasure-box')}
-          className="p-2 -ml-2 rounded-full hover:bg-slate-100 transition-colors text-slate-600"
+          onClick={() => syncFromCloud()}
+          className={`p-2 rounded-full hover:bg-slate-100 transition-colors text-slate-400 ${isSyncing ? 'animate-spin' : ''}`}
         >
-          <ArrowLeft size={24} />
+          <RefreshCw size={20} />
         </button>
-        <h1 className="text-xl font-medium text-slate-800">手术记录本</h1>
       </div>
 
       <div className="w-full max-w-md px-6 flex-1 flex flex-col overflow-hidden">
         
         {/* Calendar Card */}
         <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 mb-6 flex-shrink-0">
-          {/* Month Navigation */}
           <div className="flex items-center justify-between mb-6">
             <button onClick={() => changeMonth(-1)} className="p-1 hover:bg-slate-50 rounded-full text-slate-400">
               <ChevronLeft size={20} />
@@ -102,7 +126,6 @@ export const SurgeryHistoryPage = () => {
             </button>
           </div>
 
-          {/* Weekday Headers */}
           <div className="grid grid-cols-7 gap-1 mb-2 text-center">
             {['日', '一', '二', '三', '四', '五', '六'].map(d => (
               <div key={d} className="text-xs font-medium text-slate-400 py-1">
@@ -111,7 +134,6 @@ export const SurgeryHistoryPage = () => {
             ))}
           </div>
 
-          {/* Days Grid */}
           <div className="grid grid-cols-7 gap-1">
             {calendarDays.map((date, index) => {
               if (!date) return <div key={`empty-${index}`} />;
@@ -157,7 +179,7 @@ export const SurgeryHistoryPage = () => {
             <div className="space-y-4">
               {selectedRecords.map((record, index) => (
                 <motion.div
-                  key={record.id}
+                  key={record.id || index}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1 }}
@@ -165,7 +187,7 @@ export const SurgeryHistoryPage = () => {
                 >
                   <div className="flex items-center gap-2 mb-3">
                     <span className="text-xs font-mono text-slate-400 bg-slate-50 px-2 py-1 rounded-md">
-                      {new Date(record.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      {new Date(Number(record.timestamp) || record.createTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
                   
@@ -173,14 +195,14 @@ export const SurgeryHistoryPage = () => {
                     <div>
                       <h4 className="text-xs font-medium text-slate-400 mb-1">原始烦恼</h4>
                       <p className="text-sm text-slate-600 line-through decoration-slate-300 opacity-70">
-                        {record.trouble}
+                        {record.issue || record.trouble || '未记录'}
                       </p>
                     </div>
                     
                     <div className="relative pl-3 border-l-2 border-purple-200">
                       <h4 className="text-xs font-medium text-purple-500 mb-1">新的认知</h4>
                       <p className="text-base font-medium text-slate-800">
-                        {record.newThought}
+                        {record.conclusion || record.newThought || '未生成'}
                       </p>
                     </div>
                   </div>
@@ -194,7 +216,6 @@ export const SurgeryHistoryPage = () => {
             </div>
           )}
         </div>
-
       </div>
     </div>
   );

@@ -1,10 +1,19 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Check, ChevronRight, ChevronLeft, Save } from 'lucide-react';
-import { useMoodStore } from '../store/useMoodStore';
+import { ArrowLeft, ChevronRight, ChevronLeft, Save } from 'lucide-react';
+import { useSurgeryStore } from '../store/useSurgeryStore';
 
-const STEPS = [
+interface Step {
+  id: string;
+  title: string;
+  question: string;
+  placeholder?: string;
+  field?: string;
+  subQuestions?: { label: string; field: string; placeholder: string }[];
+}
+
+const STEPS: Step[] = [
   {
     id: 'intro',
     title: '你的烦恼',
@@ -67,10 +76,11 @@ const STEPS = [
 
 export const TroubleSurgeryPage = () => {
   const navigate = useNavigate();
-  const { addSurgeryRecord } = useMoodStore();
+  const { addRecord } = useSurgeryStore(); // 核心修复：使用了正确的 Store
   const [currentStep, setCurrentStep] = useState(0);
   
-  const [formData, setFormData] = useState({
+  // 使用 Record 类型解决索引报错问题
+  const [formData, setFormData] = useState<Record<string, string>>({
     trouble: '',
     evidence_support: '',
     evidence_against: '',
@@ -97,7 +107,7 @@ export const TroubleSurgeryPage = () => {
   const handleSave = async () => {
     if (!formData.newThought.trim()) return;
 
-    await addSurgeryRecord({
+    await addRecord({
       trouble: formData.trouble,
       evidence: {
         support: formData.evidence_support,
@@ -189,10 +199,8 @@ export const TroubleSurgeryPage = () => {
                 </>
               ) : (
                 <textarea
-                  // @ts-ignore
-                  value={formData[stepData.field]}
-                  // @ts-ignore
-                  onChange={(e) => setFormData({ ...formData, [stepData.field]: e.target.value })}
+                  value={formData[stepData.field!]}
+                  onChange={(e) => setFormData({ ...formData, [stepData.field!]: e.target.value })}
                   placeholder={stepData.placeholder}
                   className="w-full p-4 bg-white rounded-2xl border border-slate-200 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none resize-none transition-all h-48"
                 />

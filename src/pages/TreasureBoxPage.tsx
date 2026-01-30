@@ -2,11 +2,11 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, ArrowLeft, History, ChevronRight, ChevronDown, Plus, FileText } from 'lucide-react';
-import { useMoodStore } from '../store/useMoodStore';
+import { useSurgeryStore } from '../store/useSurgeryStore';
 
 export const TreasureBoxPage = () => {
   const navigate = useNavigate();
-  const { surgeryRecords } = useMoodStore();
+  const { records } = useSurgeryStore();
   const [expandedTool, setExpandedTool] = useState<string | null>(null);
 
   const toggleTool = (toolId: string) => {
@@ -114,7 +114,7 @@ export const TreasureBoxPage = () => {
                         <div className="text-left">
                           <span className="block font-medium text-slate-800">手术记录本</span>
                           <span className="text-xs text-slate-500">
-                            查看过往的思维重塑 ({surgeryRecords.length})
+                            查看过往的思维重塑 ({records.length})
                           </span>
                         </div>
                       </div>
