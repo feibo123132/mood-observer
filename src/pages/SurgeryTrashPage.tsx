@@ -43,7 +43,7 @@ export const SurgeryTrashPage = () => {
   };
 
   const handleBatchPermanentDelete = async () => {
-    if (window.confirm(`确定要彻底删除选中的 ${selectedIds.size} 条手术记录吗？此操作无法撤销。`)) {
+    if (window.confirm(`确定要彻底删除选中的 ${selectedIds.size} 条疗愈记录吗？此操作无法撤销。`)) {
       await permanentDeleteMultipleRecords(Array.from(selectedIds));
       setSelectedIds(new Set());
       setIsSelectionMode(false);
@@ -51,7 +51,7 @@ export const SurgeryTrashPage = () => {
   };
 
   const handleBatchRestore = async () => {
-    if (window.confirm(`确定要恢复选中的 ${selectedIds.size} 条手术记录吗？`)) {
+    if (window.confirm(`确定要恢复选中的 ${selectedIds.size} 条疗愈记录吗？`)) {
       await restoreMultipleRecords(Array.from(selectedIds));
       setSelectedIds(new Set());
       setIsSelectionMode(false);
@@ -66,7 +66,7 @@ export const SurgeryTrashPage = () => {
           <ArrowLeft size={24} />
         </button>
         <span className="text-lg font-medium text-slate-800">
-          手术室回收站
+          心事回收站
         </span>
         <button 
           onClick={() => {

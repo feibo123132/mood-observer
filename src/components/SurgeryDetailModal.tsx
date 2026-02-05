@@ -20,7 +20,7 @@ export const SurgeryDetailModal = ({ record, onClose, onDelete, onUpdate }: Surg
   };
 
   const handleDelete = () => {
-    if (window.confirm('确定要删除这条手术记录吗？此操作无法撤销。')) {
+    if (window.confirm('确定要删除这条疗愈记录吗？此操作无法撤销。')) {
       onDelete(record.id);
       onClose();
     }
@@ -129,7 +129,7 @@ export const SurgeryDetailModal = ({ record, onClose, onDelete, onUpdate }: Surg
           <X size={24} />
         </button>
         <span className="font-medium text-slate-800">
-          {new Date(record.timestamp).toLocaleDateString()} 手术记录
+          {new Date(record.timestamp).toLocaleDateString()} 疗愈记录
         </span>
         <div className="flex gap-2">
           {isEditing ? (

@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, ArrowLeft, History, ChevronRight, ChevronDown, Plus, FileText } from 'lucide-react';
+import { Sparkles, ArrowLeft, ChevronRight, ChevronDown, Plus, FileText } from 'lucide-react';
 import { useSurgeryStore } from '../store/useSurgeryStore';
 
 export const TreasureBoxPage = () => {
   const navigate = useNavigate();
-  const { records } = useSurgeryStore();
+  // ✅ 修正：使用最新的 Store 变量名 surgeryRecords
+  const surgeryRecords = useSurgeryStore((state) => state.records);
   const [expandedTool, setExpandedTool] = useState<string | null>(null);
 
   const toggleTool = (toolId: string) => {
@@ -46,19 +47,18 @@ export const TreasureBoxPage = () => {
               onClick={() => toggleTool('surgery')}
               className="p-6 cursor-pointer relative overflow-hidden group"
             >
+              {/* 右侧背景大装饰保持不变 */}
               <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
                  <Sparkles size={80} className="text-purple-500" />
               </div>
               
               <div className="relative z-10 flex items-start justify-between">
                 <div>
-                  <div className="w-12 h-12 rounded-2xl bg-purple-100 flex items-center justify-center text-purple-600 mb-4">
-                    <Sparkles size={24} />
-                  </div>
-                  <h3 className="text-lg font-bold text-slate-800 mb-1">烦恼手术</h3>
+                  {/* ❌ 图标容器已移除，文字将自动向上平移 */}
+                  <h3 className="text-lg font-bold text-slate-800 mb-1">心灵按摩铺</h3>
                   <p className="text-sm text-slate-500 leading-relaxed">
-                    化身苏格拉底，对自己进行一场理性的拷问。<br/>
-                    <span className="text-xs text-purple-500 mt-2 inline-block">6步思维重塑 • CBT认知疗法</span>
+                    和苏格拉底一起，在炉边聊聊你的心事<br/>
+                    <span className="text-xs text-purple-500 mt-2 inline-block">8步思维重塑 • CBT认知疗法 • 当今最成功、最有效的心灵疗愈</span>
                   </p>
                 </div>
                 
@@ -92,14 +92,14 @@ export const TreasureBoxPage = () => {
                           <Plus size={20} />
                         </div>
                         <div className="text-left">
-                          <span className="block font-medium text-slate-800">烦恼手术室</span>
-                          <span className="text-xs text-slate-500">开始一次新的思维清理</span>
+                          <span className="block font-medium text-slate-800">心灵按摩</span>
+                          <span className="text-xs text-slate-500">开始一次新的心灵疗愈体验</span>
                         </div>
                       </div>
                       <ChevronRight size={18} className="text-purple-300 group-hover:text-purple-500 transition-colors" />
                     </button>
 
-                    {/* Action Button: History (New Design) */}
+                    {/* Action Button: History */}
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -112,9 +112,10 @@ export const TreasureBoxPage = () => {
                           <FileText size={20} />
                         </div>
                         <div className="text-left">
-                          <span className="block font-medium text-slate-800">手术记录本</span>
+                          <span className="block font-medium text-slate-800">疗愈回顾</span>
                           <span className="text-xs text-slate-500">
-                            查看过往的思维重塑 ({records.length})
+                            {/* ✅ 修正：使用 surgeryRecords.length */}
+                            查看过往的心灵疗愈记录 ({surgeryRecords.length})
                           </span>
                         </div>
                       </div>

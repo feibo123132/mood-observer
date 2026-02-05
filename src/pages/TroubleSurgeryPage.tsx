@@ -16,70 +16,76 @@ interface Step {
 const STEPS: Step[] = [
   {
     id: 'intro',
-    title: '你的烦恼',
-    question: '发生了什么？你现在的自动思维（第一反应）是什么？',
-    placeholder: '例如：发朋友圈没人点赞，我觉得大家都不喜欢我...',
+    title: '你的心事',
+    question: '发生了什么？你现在的自动思维（最大的烦恼）是什么？',
+    // ✅ 已优化：更具共鸣的职场案例
+    placeholder: '例如：老板交代的任务没完成好，我觉得自己好失败...',
     field: 'trouble'
   },
   {
     id: 'evidence',
     title: '寻找证据',
-    question: '这是事实还是观点？你有确凿的证据支持或反驳这个想法吗？',
+    question: '这是事实还是观点？你有确凿证据支持或反驳这个想法？',
     subQuestions: [
-      { label: '支持的证据', field: 'evidence_support', placeholder: '有什么事实证明你是对的？' },
-      { label: '反对的证据', field: 'evidence_against', placeholder: '有什么事实能反驳这个想法？以前有过例外吗？' }
+      { label: '支持的证据', field: 'evidence_support', placeholder: '有什么事实证明你是对的？（比如：确实错过了截止日期）' },
+      { label: '反对的证据', field: 'evidence_against', placeholder: '有什么事实能反驳这个想法？以前有过做得好的时候吗？' }
     ]
   },
   {
     id: 'alternative',
     title: '替代解释',
     question: '除了你想到的这个糟糕原因，还有其他可能性吗？',
-    placeholder: '例如：也许大家都在忙？也许是算法问题？',
+    // ✅ 已优化
+    placeholder: '例如：也许是任务排期太紧？或者是沟通中存在误解？',
     field: 'alternative'
   },
   {
     id: 'implication',
     title: '评估后果',
     question: '就算这是真的，最坏的结果是什么？你真的无法承受吗？',
-    placeholder: '例如：就算没人点赞，也不会少块肉，生活还在继续...',
+    // ✅ 已优化
+    placeholder: '例如：最坏的结果是被批评，但我可以承担责任并补救，这不代表我会被开除。',
     field: 'implication'
   },
   {
     id: 'utility',
     title: '效用分析',
     question: '抱着这个想法不放，对你有帮助吗？还是在伤害你？',
-    placeholder: '例如：这个想法只会让我更焦虑，不敢社交，没有任何好处。',
+    // ✅ 已优化
+    placeholder: '例如：这个想法只会让我更焦虑，导致效率降低，无法解决任何实际问题。',
     field: 'utility'
   },
   {
     id: 'distancing',
     title: '旁观者视角',
-    question: '如果你的好朋友遇到了同样的事，你会对他说什么？',
-    placeholder: '例如：我会告诉他，别想太多，你很棒，这只是一件小事。',
+    question: '如果你的好朋友遇到了同样的事，你会对他/她说什么？',
+    // ✅ 已优化
+    placeholder: '例如：我会告诉他，谁都有失手的时候，关键是从中学习，而不是彻底否定自己。',
     field: 'distancing'
   },
   {
     id: 'plan',
     title: '行动计划',
     question: '既然想清楚了，下一步你可以做点什么来改变现状？',
-    placeholder: '例如：放下手机去洗澡，或者主动找朋友聊聊天。',
+    // ✅ 已优化
+    placeholder: '例如：深呼吸，列出失败的原因，明天主动找老板复盘并提出补救方案。',
     field: 'plan'
   },
   {
     id: 'summary',
     title: '新的认知',
-    question: '经过这番拷问，你现在如何看待这件事？请写下一个新的、更理性的想法。',
-    placeholder: '例如：点赞少不代表我不好，我的价值不由点赞数决定。',
+    question: '经过这番交流，你现在如何看待这件事？请写下一个新的、更理性的想法。',
+    // ✅ 已优化
+    placeholder: '例如：任务没做好是事实，但这并没有从根本上否定我的价值。',
     field: 'newThought'
   }
 ];
 
 export const TroubleSurgeryPage = () => {
   const navigate = useNavigate();
-  const { addRecord } = useSurgeryStore(); // 核心修复：使用了正确的 Store
+  const { addRecord } = useSurgeryStore();
   const [currentStep, setCurrentStep] = useState(0);
   
-  // 使用 Record 类型解决索引报错问题
   const [formData, setFormData] = useState<Record<string, string>>({
     trouble: '',
     evidence_support: '',
@@ -139,7 +145,7 @@ export const TroubleSurgeryPage = () => {
           <ArrowLeft size={24} />
         </button>
         <div className="flex flex-col items-center">
-          <span className="text-sm font-medium text-slate-800">烦恼手术室</span>
+          <span className="text-sm font-medium text-slate-800">心灵按摩铺</span>
           <span className="text-xs text-slate-400">Step {currentStep + 1} / {STEPS.length}</span>
         </div>
         <div className="w-10" /> {/* Spacer */}
@@ -231,7 +237,8 @@ export const TroubleSurgeryPage = () => {
               className="flex-1 py-3.5 rounded-xl font-medium bg-purple-600 text-white shadow-lg shadow-purple-200 hover:bg-purple-700 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Save size={18} />
-              完成手术
+              {/* ✅ 已同步修改为：完成按摩 */}
+              完成按摩
             </button>
           ) : (
             <button
