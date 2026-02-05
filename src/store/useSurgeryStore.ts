@@ -6,11 +6,16 @@ import { db, auth } from '../lib/cloudbase';
 interface SurgeryState {
   records: SurgeryRecord[];
   addRecord: (record: Omit<SurgeryRecord, 'id' | 'timestamp'>) => Promise<void>;
+  updateRecord: (record: SurgeryRecord) => Promise<void>;
   deleteRecord: (id: string) => Promise<void>;
   
   isSyncing: boolean;
   syncFromCloud: () => Promise<void>;
-  clearLocalData: () => void;
+  restoreRecord: (id: string) => Promise<void>;
+  permanentDeleteRecord: (id: string) => Promise<void>;
+  restoreMultipleRecords: (ids: string[]) => Promise<void>;
+  permanentDeleteMultipleRecords: (ids: string[]) => Promise<void>;
+  cleanupTrash: () => Promise<void>;
 }
 
 export const useSurgeryStore = create<SurgeryState>()(
@@ -18,6 +23,96 @@ export const useSurgeryStore = create<SurgeryState>()(
     (set, get) => ({
       records: [],
       isSyncing: false,
+
+      // --- Recycle Bin Methods ---
+      restoreRecord: async (id) => {
+        set((state) => ({
+          records: state.records.map(r => r.id === id ? { ...r, deletedAt: undefined } : r)
+        }));
+
+        const currentEmail = localStorage.getItem('mood_user_email');
+        if (currentEmail) {
+          try {
+            await db.collection('socratic_records')
+              .where({ id, userId: currentEmail })
+              .update({ deletedAt: null });
+          } catch (err) {
+            console.error('Restore surgery record failed:', err);
+          }
+        }
+      },
+
+      permanentDeleteRecord: async (id) => {
+        set((state) => ({
+          records: state.records.filter(r => r.id !== id)
+        }));
+
+        const currentEmail = localStorage.getItem('mood_user_email');
+        if (currentEmail) {
+          try {
+            await db.collection('socratic_records')
+              .where({ id, userId: currentEmail })
+              .remove();
+          } catch (err) {
+            console.error('Permanent delete surgery record failed:', err);
+          }
+        }
+      },
+
+      restoreMultipleRecords: async (ids) => {
+        set((state) => ({
+          records: state.records.map(r => ids.includes(r.id) ? { ...r, deletedAt: undefined } : r)
+        }));
+
+        const currentEmail = localStorage.getItem('mood_user_email');
+        if (currentEmail) {
+          try {
+            await db.collection('socratic_records')
+              .where({
+                id: db.command.in(ids),
+                userId: currentEmail
+              })
+              .update({ deletedAt: null });
+          } catch (err) {
+            console.error('Batch restore surgery records failed:', err);
+          }
+        }
+      },
+
+      permanentDeleteMultipleRecords: async (ids) => {
+        set((state) => ({
+          records: state.records.filter(r => !ids.includes(r.id))
+        }));
+
+        const currentEmail = localStorage.getItem('mood_user_email');
+        if (currentEmail) {
+          try {
+            await db.collection('socratic_records')
+              .where({
+                id: db.command.in(ids),
+                userId: currentEmail
+              })
+              .remove();
+          } catch (err) {
+            console.error('Batch permanent delete surgery records failed:', err);
+          }
+        }
+      },
+
+      cleanupTrash: async () => {
+        const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+        const now = Date.now();
+        const threshold = now - SEVEN_DAYS_MS;
+
+        const recordsToDelete = get().records.filter(
+          r => r.deletedAt && r.deletedAt < threshold
+        );
+
+        if (recordsToDelete.length > 0) {
+          const ids = recordsToDelete.map(r => r.id);
+          get().permanentDeleteMultipleRecords(ids);
+        }
+      },
 
       clearLocalData: () => set({ records: [], isSyncing: false }),
 
@@ -65,6 +160,36 @@ export const useSurgeryStore = create<SurgeryState>()(
         }
       },
 
+      updateRecord: async (updatedRecord) => {
+        // 1. Optimistic update local
+        set((state) => ({
+          records: state.records.map(r => r.id === updatedRecord.id ? updatedRecord : r)
+        }));
+
+        // 2. Sync to Cloud
+        const currentEmail = localStorage.getItem('mood_user_email');
+        if (currentEmail) {
+          try {
+            await db.collection('socratic_records')
+              .where({ id: updatedRecord.id, userId: currentEmail })
+              .update({
+                issue: updatedRecord.trouble,
+                dialogue: {
+                  evidence: updatedRecord.evidence,
+                  alternative: updatedRecord.alternative,
+                  implication: updatedRecord.implication,
+                  utility: updatedRecord.utility,
+                  distancing: updatedRecord.distancing,
+                  plan: updatedRecord.plan
+                },
+                conclusion: updatedRecord.newThought
+              });
+          } catch (err) {
+            console.error('Update surgery record failed:', err);
+          }
+        }
+      },
+
       deleteRecord: async (id) => {
         const now = Date.now();
         // Soft delete locally (filter out for UI, but maybe keep in DB? For now let's just remove from UI to match requirement)
@@ -100,7 +225,6 @@ export const useSurgeryStore = create<SurgeryState>()(
             console.log(`[Surgery] Cloud sync success: ${res.data.length} records`);
             
             const cloudRecords = res.data
-                .filter((item: any) => !item.deletedAt) // Filter out soft-deleted
                 .map((item: any) => ({
                     id: item.id,
                     timestamp: item.timestamp,
@@ -111,7 +235,8 @@ export const useSurgeryStore = create<SurgeryState>()(
                     utility: item.dialogue?.utility || '',
                     distancing: item.dialogue?.distancing || '',
                     plan: item.dialogue?.plan || '',
-                    newThought: item.conclusion
+                    newThought: item.conclusion,
+                    deletedAt: item.deletedAt
                 })) as SurgeryRecord[];
 
             // Merge Logic

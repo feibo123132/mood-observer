@@ -1,54 +1,56 @@
 ---
 name: "resolve-build-errors"
-description: "Diagnoses and fixes common build/deploy failures (TypeScript errors, duplicate keys, library type mismatches). Invoke when user reports 'build failed', 'github action failed', or 'deploy error'."
+description: "Diagnoses and fixes common build/deploy failures. Merges strategies for both code-level fixes (TypeScript, duplicates) and workflow-level guards (local build checks, type consistency). Invoke when user reports 'build failed', 'github action failed', or 'deploy error'."
 ---
 
 # Resolve Build & Deployment Errors
 
-This skill provides a systematic approach to fixing build failures that often occur in CI/CD environments (like GitHub Actions) even when local dev servers seem fine.
+This skill provides a unified strategy for ensuring successful builds and deployments, combining specific code-fix patterns with proactive workflow guards.
 
-## Common Error Patterns & Fixes
+## 🎯 Proactive Guard: Before You Push (The "Deploy Guard" Protocol)
+
+**Goal**: Catch errors locally so they never break the CI pipeline.
+
+1.  **Type Consistency Check (Critical)**:
+    *   **Problem**: Types defined in multiple places (e.g., `AudioMode` in both `store` and `services`) get out of sync.
+    *   **Solution**: Use a **Single Source of Truth**. Define types in `src/types/index.ts` or a main store file, and import them everywhere. When modifying a type (e.g., adding `'friend'` mode), globally search to update all usages.
+2.  **Local Build Simulation**:
+    *   **Problem**: `pnpm dev` is permissive; GitHub Actions (`tsc -b && vite build`) are strict.
+    *   **Solution**: **ALWAYS** run this locally before pushing:
+        ```bash
+        pnpm build
+        ```
+    *   If it fails here, it *will* fail on GitHub. Fix it locally first.
+
+## 🛠️ Reactive Fixes: Common Error Patterns
+
+If a build has already failed, use these patterns to diagnose and fix.
 
 ### 0. File Casing Mismatches
-**Error**: `Cannot find module '.../MyComponent'`
-**Cause**: The CI/CD environment (Linux) is case-sensitive, but your local OS (Windows/macOS) is not. Your file might be named `mycomponent.tsx` but you imported it as `MyComponent`.
-**Fix**:
-1. Ensure the import path's casing **exactly** matches the actual file name.
-2. If the file name needs to be changed in Git, use `git mv` to force Git to recognize the case change.
+*   **Error**: `Cannot find module '.../MyComponent'`
+*   **Cause**: Linux (CI) is case-sensitive; Windows/macOS (Local) are not.
+*   **Fix**: Ensure import path casing **exactly** matches the filename. Use `git mv` if renaming files to change case.
 
 ### 1. Duplicate Object Properties
-**Error**: `An object literal cannot have multiple properties with the same name.`
-**Cause**: Copy-pasting code blocks or merging configurations without cleaning up.
-**Fix**:
-1.  Locate the file and line number from the build log.
-2.  Scan the object literal for duplicate keys (e.g., two `color:` properties).
-3.  Remove the redundant property (usually the first one is outdated, keep the second/intended one, or merge them).
+*   **Error**: `An object literal cannot have multiple properties with the same name.`
+*   **Cause**: Merge conflicts or copy-pasting.
+*   **Fix**: Locate the object, remove the redundant property (keep the intended/newer one).
 
 ### 2. Missing Type Definitions
-**Error**: `Property 'x' does not exist on type 'Y'.`
-**Cause**: Using a new property in a component (e.g., `date`) that hasn't been added to the shared TypeScript interface.
-**Fix**:
-1.  Find the interface definition (usually in `src/types/index.ts` or similar).
-2.  Add the missing property.
-3.  **Best Practice**: Mark it as optional (`?`) if it's not guaranteed to be present in all legacy data.
-    ```typescript
-    export interface MoodRecord {
-      // ... existing fields
-      date?: string; // Add this
-    }
-    ```
+*   **Error**: `Property 'x' does not exist on type 'Y'.`
+*   **Cause**: Using a new field (e.g., `date`, `friend` mode) without updating the interface.
+*   **Fix**: Find the interface definition and add the missing property. Mark as optional (`?`) if needed for legacy data compatibility.
 
-### 3. Library Type Mismatches (e.g., Recharts)
-**Error**: `Type '(a, b, c) => void' is not assignable to type 'HandlerType'.` or `Expected X arguments, got Y.`
-**Cause**: Strict TypeScript definitions in libraries often conflict with practical usage, especially for event handlers.
-**Fix**:
-1.  **Simplify**: Check if the handler is even necessary. (e.g., Does the parent component already handle the click?)
-2.  **Remove Redundancy**: If a child component (like `<Area>`) has a handler that conflicts, but the parent (`<AreaChart>`) has a working global handler, remove the child's handler.
-3.  **Cast to Any** (Last Resort): If functionality is correct but types are wrong, cast the handler or arguments to `any` to unblock the build.
+### 3. Library Type Mismatches
+*   **Error**: `Type '...' is not assignable to type 'HandlerType'.`
+*   **Cause**: Strict library types conflicting with usage.
+*   **Fix**: Simplify handlers, remove redundant ones, or (as a last resort) cast to `any` to unblock the build.
 
-## Workflow for "GitHub Upload Failed"
+## 🔄 Workflow for "GitHub Upload Failed"
 
-1.  **Read the Logs**: Don't guess. Ask the user for the error log or screenshot of the "Annotations" / "Build" step.
-2.  **Isolate the File**: Identify which file is causing the build break.
-3.  **Apply Pattern**: Match the error to one of the above patterns.
-4.  **Fix & Verify**: Apply the code change. If possible, run `npm run build` locally to verify before asking user to push again.
+1.  **Read Logs**: Get the specific error from the "Annotations" or "Build" step.
+2.  **Isolate**: Identify the file and line number.
+3.  **Diagnose**: Is it a Type Error? Casing Error? Duplicate Key?
+4.  **Fix**: Apply the relevant pattern above.
+5.  **Verify**: Run `pnpm build` locally.
+6.  **Push**: Only push when local build passes.

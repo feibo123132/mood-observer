@@ -1,8 +1,10 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, ChevronLeft, ChevronRight, Calendar as CalendarIcon, FileText, RefreshCw } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight, Calendar as CalendarIcon, FileText, RefreshCw, Trash2 } from 'lucide-react';
 import { useSurgeryStore } from '../store/useSurgeryStore';
+import { SurgeryRecord } from '../types';
+import { SurgeryDetailModal } from '../components/SurgeryDetailModal';
 
 export const SurgeryHistoryPage = () => {
   const navigate = useNavigate();
@@ -11,9 +13,12 @@ export const SurgeryHistoryPage = () => {
   const surgeryRecords = useSurgeryStore((state) => state.records);
   const syncFromCloud = useSurgeryStore((state) => state.syncFromCloud);
   const isSyncing = useSurgeryStore((state) => state.isSyncing);
+  const deleteRecord = useSurgeryStore((state) => state.deleteRecord);
+  const updateRecord = useSurgeryStore((state) => state.updateRecord);
   
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
+  const [viewingRecord, setViewingRecord] = useState<SurgeryRecord | null>(null);
 
   useEffect(() => {
     syncFromCloud();
@@ -49,7 +54,9 @@ export const SurgeryHistoryPage = () => {
     const safeRecords = Array.isArray(surgeryRecords) ? surgeryRecords : [];
     const map = new Map<string, any[]>();
     
-    safeRecords.forEach(record => {
+    safeRecords
+      .filter(record => !record.deletedAt) // Filter out deleted records
+      .forEach(record => {
       let ts = Number(record.timestamp);
       if (!ts || isNaN(ts)) {
         if (record.createTime) {
@@ -102,12 +109,22 @@ export const SurgeryHistoryPage = () => {
           </button>
           <h1 className="text-xl font-medium text-slate-800">手术记录本</h1>
         </div>
-        <button 
-          onClick={() => syncFromCloud()}
-          className={`p-2 rounded-full hover:bg-slate-100 transition-colors text-slate-400 ${isSyncing ? 'animate-spin' : ''}`}
-        >
-          <RefreshCw size={20} />
-        </button>
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={() => navigate('/treasure-box/surgery-trash')}
+            className="p-2 rounded-full hover:bg-slate-100 transition-colors text-slate-400 hover:text-red-400"
+            title="回收站"
+          >
+            <Trash2 size={20} />
+          </button>
+          <button 
+            onClick={() => syncFromCloud()}
+            className={`p-2 rounded-full hover:bg-slate-100 transition-colors text-slate-400 ${isSyncing ? 'animate-spin' : ''}`}
+            title="同步"
+          >
+            <RefreshCw size={20} />
+          </button>
+        </div>
       </div>
 
       <div className="w-full max-w-md px-6 flex-1 flex flex-col overflow-hidden">
@@ -180,10 +197,12 @@ export const SurgeryHistoryPage = () => {
               {selectedRecords.map((record, index) => (
                 <motion.div
                   key={record.id || index}
+                  layoutId={record.id}
+                  onClick={() => setViewingRecord(record)}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1 }}
-                  className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100"
+                  className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 cursor-pointer active:scale-95 transition-transform"
                 >
                   <div className="flex items-center gap-2 mb-3">
                     <span className="text-xs font-mono text-slate-400 bg-slate-50 px-2 py-1 rounded-md">
@@ -194,14 +213,14 @@ export const SurgeryHistoryPage = () => {
                   <div className="space-y-4">
                     <div>
                       <h4 className="text-xs font-medium text-slate-400 mb-1">原始烦恼</h4>
-                      <p className="text-sm text-slate-600 line-through decoration-slate-300 opacity-70">
+                      <p className="text-sm text-slate-600 line-through decoration-slate-300 opacity-70 line-clamp-2">
                         {record.issue || record.trouble || '未记录'}
                       </p>
                     </div>
                     
                     <div className="relative pl-3 border-l-2 border-purple-200">
                       <h4 className="text-xs font-medium text-purple-500 mb-1">新的认知</h4>
-                      <p className="text-base font-medium text-slate-800">
+                      <p className="text-base font-medium text-slate-800 line-clamp-3">
                         {record.conclusion || record.newThought || '未生成'}
                       </p>
                     </div>
@@ -217,6 +236,17 @@ export const SurgeryHistoryPage = () => {
           )}
         </div>
       </div>
+
+      <AnimatePresence>
+        {viewingRecord && (
+          <SurgeryDetailModal
+            record={viewingRecord}
+            onClose={() => setViewingRecord(null)}
+            onDelete={deleteRecord}
+            onUpdate={updateRecord}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };

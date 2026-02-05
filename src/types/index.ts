@@ -20,6 +20,7 @@ export interface SurgeryRecord {
   distancing: string;
   plan: string;
   newThought: string; // The result/conclusion
+  deletedAt?: number;
 }
 
 export interface DailySummary {

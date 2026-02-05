@@ -9,6 +9,7 @@ import { ReportVisualizationPage } from './pages/ReportVisualizationPage';
 import { TreasureBoxPage } from './pages/TreasureBoxPage';
 import { TroubleSurgeryPage } from './pages/TroubleSurgeryPage';
 import { SurgeryHistoryPage } from './pages/SurgeryHistoryPage';
+import { SurgeryTrashPage } from './pages/SurgeryTrashPage';
 import { RequireAuth } from './components/RequireAuth';
 import { useEffect } from 'react';
 import { useAuthStore } from './store/useAuthStore';
@@ -120,6 +121,11 @@ function App() {
         <Route path="/treasure-box/surgery-history" element={
           <RequireAuth>
             <SurgeryHistoryPage />
+          </RequireAuth>
+        } />
+        <Route path="/treasure-box/surgery-trash" element={
+          <RequireAuth>
+            <SurgeryTrashPage />
           </RequireAuth>
         } />
         <Route path="/login" element={<LoginPage />} />
