@@ -13,7 +13,7 @@ interface MoodState {
   
   records: MoodRecord[];
   surgeryRecords: SurgeryRecord[];
-  addRecord: (record: Omit<MoodRecord, 'id' | 'timestamp'>) => Promise<void>;
+  addRecord: (record: Omit<MoodRecord, 'id' | 'timestamp'> & { timestamp?: number }) => Promise<void>;
   addSurgeryRecord: (record: Omit<SurgeryRecord, 'id' | 'timestamp'>) => Promise<void>;
   deleteRecord: (id: string) => Promise<void>;
   deleteMultipleRecords: (ids: string[]) => Promise<void>;
@@ -181,9 +181,9 @@ export const useMoodStore = create<MoodState>()(
 
       addRecord: async (record) => {
         const id = crypto.randomUUID();
-        // FIXED: 强制使用当前时间，不依赖外部输入
-        const timestamp = Date.now();
-        const date = new Date().toISOString();
+        // 如果传入了 timestamp 则使用，否则使用当前时间
+        const timestamp = record.timestamp || Date.now();
+        const date = new Date(timestamp).toISOString();
 
         // 注意：这里显式覆盖了 record 中的 date 和 timestamp
         const newRecord = { ...record, id, timestamp, date };

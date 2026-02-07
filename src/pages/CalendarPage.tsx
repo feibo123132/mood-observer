@@ -1,21 +1,23 @@
 import { useState, useMemo } from 'react';
 import { useMoodStore } from '../store/useMoodStore';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, getDay } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, getDay, addMonths, subMonths } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import { getMoodState } from '../utils/moodUtils';
 import { getHarvestLevel } from '../utils/harvestUtils';
-import { ArrowLeft, CheckSquare, Trash2, Square, ChevronDown, ChevronRight, Trees, Map } from 'lucide-react';
+import { ArrowLeft, CheckSquare, Trash2, Square, ChevronDown, ChevronRight, Trees, Map, PenLine, ChevronLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RecordEditModal } from '../components/RecordEditModal';
+import { RecordCreationModal } from '../components/RecordCreationModal';
 import { MoodRecord } from '../types';
 
 export const CalendarPage = () => {
   const navigate = useNavigate();
   const { records, deleteMultipleRecords } = useMoodStore();
-  const [currentDate] = useState(new Date());
+  const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
   const [editingRecord, setEditingRecord] = useState<MoodRecord | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   
   // Selection Mode State
   const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -116,9 +118,25 @@ export const CalendarPage = () => {
         <button onClick={() => navigate('/')} className="p-2 -ml-2 rounded-full hover:bg-slate-100 text-slate-600 transition-colors">
           <ArrowLeft size={24} />
         </button>
-        <span className="text-lg font-medium text-slate-800">
-          {format(currentDate, 'yyyy年M月', { locale: zhCN })}
-        </span>
+        
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={() => setCurrentDate(prev => subMonths(prev, 1))}
+            className="p-1 rounded-full hover:bg-slate-100 text-slate-400 transition-colors"
+          >
+            <ChevronLeft size={20} />
+          </button>
+          <span className="text-lg font-medium text-slate-800 w-24 text-center">
+            {format(currentDate, 'yyyy年M月', { locale: zhCN })}
+          </span>
+          <button 
+            onClick={() => setCurrentDate(prev => addMonths(prev, 1))}
+            className="p-1 rounded-full hover:bg-slate-100 text-slate-400 transition-colors"
+          >
+            <ChevronRight size={20} />
+          </button>
+        </div>
+
         <div className="w-10" />
       </div>
 
@@ -179,24 +197,40 @@ export const CalendarPage = () => {
                 {format(selectedDate, 'yyyy年M月d日', { locale: zhCN })}
               </h3>
               
-              {/* Selection Mode Toggle */}
-              <button 
-                onClick={() => {
-                  setIsSelectionMode(!isSelectionMode);
-                  setSelectedIds(new Set());
-                }}
-                className={`p-1.5 rounded-lg transition-colors flex items-center gap-1 ${
-                  isSelectionMode ? 'bg-slate-200 text-slate-800' : 'hover:bg-slate-100 text-slate-400'
-                }`}
-                title="批量管理"
-              >
-                <CheckSquare size={16} />
-              </button>
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => setIsCreateModalOpen(true)}
+                  className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 transition-colors"
+                  title="补记"
+                >
+                  <PenLine size={16} />
+                </button>
+
+                {/* Selection Mode Toggle */}
+                <button 
+                  onClick={() => {
+                    setIsSelectionMode(!isSelectionMode);
+                    setSelectedIds(new Set());
+                  }}
+                  className={`p-1.5 rounded-lg transition-colors flex items-center gap-1 ${
+                    isSelectionMode ? 'bg-slate-200 text-slate-800' : 'hover:bg-slate-100 text-slate-400'
+                  }`}
+                  title="批量管理"
+                >
+                  <CheckSquare size={16} />
+                </button>
+              </div>
             </div>
             
             {selectedRecords.length === 0 ? (
-              <div className="text-center py-8 text-slate-400 font-light italic">
-                今日暂无记录。
+              <div className="text-center py-8 flex flex-col items-center gap-4">
+                <span className="text-slate-400 font-light italic">今日暂无记录</span>
+                <button 
+                  onClick={() => setIsCreateModalOpen(true)}
+                  className="px-6 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-full text-sm transition-colors"
+                >
+                  补记一条
+                </button>
               </div>
             ) : (
               <div className="space-y-6">
@@ -430,6 +464,14 @@ export const CalendarPage = () => {
         record={editingRecord} 
         onClose={() => setEditingRecord(null)} 
       />
+
+      {selectedDate && (
+        <RecordCreationModal
+          isOpen={isCreateModalOpen}
+          onClose={() => setIsCreateModalOpen(false)}
+          initialDate={selectedDate}
+        />
+      )}
     </div>
   );
 };
