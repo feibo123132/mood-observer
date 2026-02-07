@@ -36,6 +36,7 @@ interface MoodState {
 
   clearLocalData: () => void;
   fixLegacyData: () => Promise<void>;
+  deduplicateCloudData: () => Promise<void>;
 }
 
 export const useMoodStore = create<MoodState>()(
@@ -92,15 +93,30 @@ export const useMoodStore = create<MoodState>()(
 
         set({ isSyncing: true });
         try {
-          // 1. 拉取云端数据 (增加 userId 过滤)
-          const res = await db.collection('mood_records')
-            .where({ userId: currentEmail })
-            .get();
-          
-          if (res.data) {
-            console.log(`云端同步成功，共拉取到 ${res.data.length} 条数据`);
+          // 1. 拉取云端所有数据 (分页处理，解决数据不全导致的重复上传问题)
+          let allCloudData: any[] = [];
+          let page = 0;
+          const LIMIT = 100; // 客户端 SDK 单次请求限制
+
+          while (true) {
+            const res = await db.collection('mood_records')
+              .where({ userId: currentEmail })
+              .skip(page * LIMIT)
+              .limit(LIMIT)
+              .get();
             
-            const cloudRecords = res.data.map((item: any) => ({
+            if (!res.data || res.data.length === 0) break;
+            allCloudData = allCloudData.concat(res.data);
+            
+            // 如果获取数量少于限制，说明是最后一页
+            if (res.data.length < LIMIT) break;
+            page++;
+          }
+
+          if (allCloudData.length > 0) {
+            console.log(`云端同步成功，共拉取到 ${allCloudData.length} 条数据`);
+            
+            const cloudRecords = allCloudData.map((item: any) => ({
               id: item.id,
               score: item.score,
               note: item.note,
@@ -114,16 +130,17 @@ export const useMoodStore = create<MoodState>()(
             const localRecords = get().records;
             const recordsToPush = localRecords.filter(r => !cloudIds.has(r.id));
 
-      // 格式化日期辅助函数
-      const formatDate = (timestamp: number) => {
-        const d = new Date(timestamp);
-        const pad = (n: number) => n.toString().padStart(2, '0');
-        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-      };
+            // 格式化日期辅助函数
+            const formatDate = (timestamp: number) => {
+              const d = new Date(timestamp);
+              const pad = (n: number) => n.toString().padStart(2, '0');
+              return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+            };
 
             if (recordsToPush.length > 0) {
               console.log(`发现 ${recordsToPush.length} 条本地数据待补传...`);
-              // 并发上传
+              // 并发上传 (带检测，虽然前面已经 filter 过了，但如果是并发环境，可以加 double check)
+              // 这里我们信任 filter 结果，因为我们拉取了全量数据
               await Promise.all(recordsToPush.map(record => 
                 db.collection('mood_records').add({
                   ...record,
@@ -465,6 +482,81 @@ export const useMoodStore = create<MoodState>()(
           }
         } else {
           console.log(`✅ 本地修复完成！(未登录，跳过云端同步)`);
+        }
+      },
+      
+      deduplicateCloudData: async () => {
+        const currentEmail = localStorage.getItem('mood_user_email');
+        if (!currentEmail) return;
+        
+        console.log('🚀 开始执行云端去重...');
+        set({ isSyncing: true });
+        
+        try {
+          // 1. Fetch all
+          let allCloudData: any[] = [];
+          let page = 0;
+          const LIMIT = 100;
+
+          while (true) {
+            const res = await db.collection('mood_records')
+              .where({ userId: currentEmail })
+              .skip(page * LIMIT)
+              .limit(LIMIT)
+              .get();
+            if (!res.data || res.data.length === 0) break;
+            allCloudData = allCloudData.concat(res.data);
+            if (res.data.length < LIMIT) break;
+            page++;
+          }
+
+          // 2. Identify duplicates
+          const seenIds = new Set();
+          const duplicates: string[] = []; // _id list (docId)
+
+          // 优先保留第一次出现的记录 (或者可以按创建时间排序后保留最新的/最旧的)
+          // 这里假设所有重复记录内容一致，保留任意一个即可
+          allCloudData.forEach(item => {
+            if (seenIds.has(item.id)) {
+              duplicates.push(item._id);
+            } else {
+              seenIds.add(item.id);
+            }
+          });
+
+          if (duplicates.length === 0) {
+             console.log('🎉 未发现重复数据。');
+             return;
+          }
+
+          console.log(`🧹 发现 ${duplicates.length} 条重复数据，正在清理...`);
+
+          // 3. Batch delete
+          const _ = db.command;
+          const chunkSize = 50;
+          for (let i = 0; i < duplicates.length; i += chunkSize) {
+            const chunk = duplicates.slice(i, i + chunkSize);
+            try {
+              await db.collection('mood_records')
+                .where({
+                  _id: _.in(chunk)
+                })
+                .remove();
+              console.log(`已清理 ${Math.min(i + chunkSize, duplicates.length)}/${duplicates.length}`);
+            } catch (e) {
+              console.error('清理批次失败:', e);
+            }
+          }
+          
+          console.log('✅ 去重完成！');
+          
+          // Refresh
+          get().syncFromCloud();
+
+        } catch (e) {
+          console.error('去重失败:', e);
+        } finally {
+          set({ isSyncing: false });
         }
       },
       
