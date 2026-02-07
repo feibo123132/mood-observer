@@ -206,6 +206,7 @@ export const useControlStore = create<ControlState>()(
             console.log(`[Control] Cloud sync success: ${res.data.length} records`);
             
             const cloudRecords = res.data
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 .map((item: any) => ({
                     id: item.id,
                     timestamp: item.timestamp,

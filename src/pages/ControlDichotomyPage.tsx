@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, GripVertical, Trash2, Save, ArrowRight, ArrowLeft as ArrowLeftIcon, Check } from 'lucide-react';
+import { ArrowLeft, Trash2, Save, ArrowRight, ArrowLeft as ArrowLeftIcon, Check } from 'lucide-react';
 import { useControlStore } from '../store/useControlStore';
 import { ControlItem } from '../types';
 

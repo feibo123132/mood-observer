@@ -23,7 +23,7 @@ export const SurgeryHistoryPage = () => {
 
   useEffect(() => {
     syncFromCloud();
-  }, []);
+  }, [syncFromCloud]);
 
   const getDateKey = (date: Date) => {
     return `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
@@ -60,8 +60,8 @@ export const SurgeryHistoryPage = () => {
       .forEach(record => {
       let ts = Number(record.timestamp);
       if (!ts || isNaN(ts)) {
-        if (record.createTime) {
-          ts = new Date(record.createTime).getTime();
+        if ((record as any).createTime) {
+          ts = new Date((record as any).createTime).getTime();
         } else {
           ts = Date.now();
         }
@@ -231,7 +231,7 @@ export const SurgeryHistoryPage = () => {
                 >
                   <div className="flex items-center gap-2 mb-3">
                     <span className="text-xs font-mono text-slate-400 bg-slate-50 px-2 py-1 rounded-md">
-                      {new Date(Number(record.timestamp) || record.createTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      {new Date(Number(record.timestamp) || (record as any).createTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
                   
@@ -239,14 +239,14 @@ export const SurgeryHistoryPage = () => {
                     <div>
                       <h4 className="text-xs font-medium text-slate-400 mb-1">原始烦恼</h4>
                       <p className="text-sm text-slate-600 line-through decoration-slate-300 opacity-70 line-clamp-2">
-                        {record.issue || record.trouble || '未记录'}
+                        {record.trouble || (record as any).issue || '未记录'}
                       </p>
                     </div>
                     
                     <div className="relative pl-3 border-l-2 border-purple-200">
                       <h4 className="text-xs font-medium text-purple-500 mb-1">新的认知</h4>
                       <p className="text-base font-medium text-slate-800 line-clamp-3">
-                        {record.conclusion || record.newThought || '未生成'}
+                        {record.newThought || (record as any).conclusion || '未生成'}
                       </p>
                     </div>
                   </div>

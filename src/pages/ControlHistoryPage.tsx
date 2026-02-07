@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Trash2, Calendar, ChevronDown, ChevronUp } from 'lucide-react';
 import { useControlStore } from '../store/useControlStore';
-import { ControlRecord } from '../types';
 
 export const ControlHistoryPage = () => {
   const navigate = useNavigate();
@@ -12,7 +11,7 @@ export const ControlHistoryPage = () => {
 
   useEffect(() => {
     syncFromCloud();
-  }, []);
+  }, [syncFromCloud]);
 
   const handleDelete = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
