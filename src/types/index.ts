@@ -23,6 +23,21 @@ export interface SurgeryRecord {
   deletedAt?: number;
 }
 
+export interface ControlItem {
+  id: string;
+  text: string;
+  type: 'controllable' | 'uncontrollable';
+}
+
+export interface ControlRecord {
+  id: string;
+  timestamp: number;
+  challenge: string;
+  items: ControlItem[];
+  summary?: string; // Optional reflection or the prayer
+  deletedAt?: number;
+}
+
 export interface DailySummary {
   date: string; // YYYY-MM-DD
   averageScore: number;

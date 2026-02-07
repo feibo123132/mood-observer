@@ -10,12 +10,15 @@ import { TreasureBoxPage } from './pages/TreasureBoxPage';
 import { TroubleSurgeryPage } from './pages/TroubleSurgeryPage';
 import { SurgeryHistoryPage } from './pages/SurgeryHistoryPage';
 import { SurgeryTrashPage } from './pages/SurgeryTrashPage';
+import { ControlDichotomyPage } from './pages/ControlDichotomyPage';
+import { ControlHistoryPage } from './pages/ControlHistoryPage';
 import { RequireAuth } from './components/RequireAuth';
 import { useEffect } from 'react';
 import { useAuthStore } from './store/useAuthStore';
 
 import { useMoodStore } from './store/useMoodStore';
 import { useSurgeryStore } from './store/useSurgeryStore';
+import { useControlStore } from './store/useControlStore';
 
 function App() {
   const initAuth = useAuthStore(state => state.initAuth);
@@ -70,7 +73,8 @@ function App() {
       // 核心修复：同时同步两个 Store 的数据
       Promise.all([
         useMoodStore.getState().syncFromCloud(),
-        useSurgeryStore.getState().syncFromCloud()
+        useSurgeryStore.getState().syncFromCloud(),
+        useControlStore.getState().syncFromCloud()
       ]).catch(console.error);
     }
   }, [user]);
@@ -126,6 +130,16 @@ function App() {
         <Route path="/treasure-box/surgery-trash" element={
           <RequireAuth>
             <SurgeryTrashPage />
+          </RequireAuth>
+        } />
+        <Route path="/treasure-box/control-dichotomy" element={
+          <RequireAuth>
+            <ControlDichotomyPage />
+          </RequireAuth>
+        } />
+        <Route path="/treasure-box/control-history" element={
+          <RequireAuth>
+            <ControlHistoryPage />
           </RequireAuth>
         } />
         <Route path="/login" element={<LoginPage />} />
