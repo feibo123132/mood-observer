@@ -31,8 +31,8 @@ interface MoodState {
   
   // Weekly Reports
   reports: Record<string, string>; // Key: "year-week", Value: report content
-  saveReport: (year: number, week: number, content: string) => void;
-  deleteReport: (year: number, week: number) => void;
+  saveReport: (year: number, week: number, content: string) => Promise<void>;
+  deleteReport: (year: number, week: number) => Promise<void>;
 
   clearLocalData: () => void;
   fixLegacyData: () => Promise<void>;
@@ -61,14 +61,56 @@ export const useMoodStore = create<MoodState>()(
 
       // Report Logic
       reports: {},
-      saveReport: (year, week, content) => set((state) => ({
-        reports: { ...state.reports, [`${year}-${week}`]: content }
-      })),
-      deleteReport: (year, week) => set((state) => {
-        const newReports = { ...state.reports };
-        delete newReports[`${year}-${week}`];
-        return { reports: newReports };
-      }),
+      saveReport: async (year, week, content) => {
+        // 1. Update Local
+        set((state) => ({
+          reports: { ...state.reports, [`${year}-${week}`]: content }
+        }));
+
+        // 2. Sync to Cloud
+        const currentEmail = localStorage.getItem('mood_user_email');
+        if (currentEmail) {
+          try {
+            const collection = db.collection('mood_reports');
+            const query = collection.where({ year, week, userId: currentEmail });
+            const countRes = await query.count();
+            
+            if (countRes.total > 0) {
+              await query.update({ content, updateTime: new Date().toISOString() });
+            } else {
+              await collection.add({
+                year,
+                week,
+                content,
+                userId: currentEmail,
+                createTime: new Date().toISOString()
+              });
+            }
+          } catch (err) {
+            console.error('Save cloud report failed:', err);
+          }
+        }
+      },
+      deleteReport: async (year, week) => {
+        // 1. Update Local
+        set((state) => {
+          const newReports = { ...state.reports };
+          delete newReports[`${year}-${week}`];
+          return { reports: newReports };
+        });
+
+        // 2. Sync to Cloud
+        const currentEmail = localStorage.getItem('mood_user_email');
+        if (currentEmail) {
+          try {
+            await db.collection('mood_reports')
+              .where({ year, week, userId: currentEmail })
+              .remove();
+          } catch (err) {
+            console.error('Delete cloud report failed:', err);
+          }
+        }
+      },
 
       clearLocalData: () => set({
         currentScore: 50,
@@ -172,6 +214,30 @@ export const useMoodStore = create<MoodState>()(
               records: cleanList.sort((a, b) => a.timestamp - b.timestamp) 
             });
           }
+
+          // 4. Sync Reports
+          try {
+            const reportRes = await db.collection('mood_reports')
+              .where({ userId: currentEmail })
+              .limit(1000) // Assuming user won't have >1000 reports soon
+              .get();
+            
+            if (reportRes.data && reportRes.data.length > 0) {
+              const cloudReports = reportRes.data.reduce((acc: any, curr: any) => {
+                acc[`${curr.year}-${curr.week}`] = curr.content;
+                return acc;
+              }, {});
+
+              // Merge: Cloud wins or Local wins? Let's merge.
+              set((state) => ({
+                reports: { ...state.reports, ...cloudReports }
+              }));
+              console.log(`同步了 ${reportRes.data.length} 份情绪报告`);
+            }
+          } catch (e) {
+            console.error('Sync reports failed:', e);
+          }
+
         } catch (err) {
           console.error('Sync failed:', err);
         } finally {
