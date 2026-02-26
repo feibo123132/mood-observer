@@ -6,7 +6,7 @@ import { useMoodStore } from '../store/useMoodStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { AudioMode } from '../types';
-import { PenLine, X, Check, User, RefreshCw, Box, Trees, Map } from 'lucide-react';
+import { PenLine, X, Check, User, RefreshCw, Box, Trees, Map, Settings2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { UserMenu } from '../components/UserMenu';
 import { audioPlayer } from '../services/AudioPlayer';
@@ -75,11 +75,31 @@ export const HomePage = () => {
   const [isWakeUp, setIsWakeUp] = useState(false);
   const [wakeUpScore, setWakeUpScore] = useState(50);
 
+  // Check if we have records for today (to suppress wake up screen)
+  const hasTodayRecords = useMemo(() => {
+    const now = new Date();
+    return records.some(r => {
+      const rDate = new Date(r.timestamp);
+      return rDate.getDate() === now.getDate() &&
+             rDate.getMonth() === now.getMonth() &&
+             rDate.getFullYear() === now.getFullYear();
+    });
+  }, [records]);
+
   useEffect(() => {
+    // If it's a new day (locally), we check if we actually have data for today (synced from cloud)
     if (isNewDay) {
-      setIsWakeUp(true);
+      if (hasTodayRecords) {
+        setIsWakeUp(false);
+        // If we have records, we should ideally update lastVisitDate to avoid check on next refresh
+        // But for now, controlling the UI via isWakeUp is enough
+      } else {
+        setIsWakeUp(true);
+      }
+    } else {
+      setIsWakeUp(false);
     }
-  }, [isNewDay]);
+  }, [isNewDay, hasTodayRecords]);
 
   // Preload audio when wake up score changes
   useEffect(() => {
@@ -195,15 +215,15 @@ export const HomePage = () => {
       </div>
 
       {/* Main Content Area */}
-          <div className="flex-1 flex flex-col items-center justify-center w-full max-w-md z-10 min-h-[60vh]">
-            <MoodSphere score={displayScore} size={320} />
-            
-            <div className="flex flex-col items-center gap-12 mt-24">
-               <button 
-                 onClick={() => {
-                   setRecordScore(currentScore);
-                   setRecordType('mood'); // Default to mood
-                   setIsRecording(true);
+      <div className="flex-1 flex flex-col items-center justify-center w-full max-w-md z-10 min-h-[60vh]">
+        <MoodSphere score={displayScore} size={320} />
+        
+        <div className="flex flex-col items-center gap-12 mt-24">
+           <button 
+             onClick={() => {
+               setRecordScore(currentScore);
+               setRecordType('mood'); // Default to mood
+               setIsRecording(true);
              }}
              className="flex items-center gap-2 px-6 py-3 bg-white/80 backdrop-blur-md shadow-lg rounded-full text-slate-700 font-medium hover:bg-white transition-all transform hover:scale-105"
            >
@@ -211,7 +231,7 @@ export const HomePage = () => {
              <span>记录当下</span>
            </button>
            
-           <div className="text-center px-6">
+           <div className="text-center px-6 space-y-4">
              <p className="text-xs text-slate-400 font-light leading-relaxed">
                "无关好坏，每种情绪都是心灵的一部分，<br/>我们要做的，只是静静地感受、记录并默默地陪伴着它们便好。"
              </p>
@@ -219,6 +239,9 @@ export const HomePage = () => {
         </div>
       </div>
 
+      {/* Modals */}
+      {/* Migration Modal moved to UserMenu */}
+      
       {/* Record Modal/Overlay */}
       <AnimatePresence>
         {isRecording && (

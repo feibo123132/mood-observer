@@ -1,0 +1,5 @@
+- [ ] UserMenu contains a "其他" (Others) group.
+- [ ] Clicking "其他" expands/collapses the submenu.
+- [ ] "找回旧数据" (Retrieve Old Data) is listed under "其他".
+- [ ] Clicking "找回旧数据" opens the migration modal.
+- [ ] The "找回旧数据" button is NO LONGER visible on the HomePage main content.

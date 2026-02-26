@@ -1,0 +1,3 @@
+- [x] User logs in via email code, and `localStorage.getItem('mood_user_email')` contains their email.
+- [x] User can see their previous mood records (stored with `userId: email`).
+- [x] User logs out, and `localStorage.getItem('mood_user_email')` is removed.

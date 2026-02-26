@@ -1,31 +1,62 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/useAuthStore';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { Loader2, Mail } from 'lucide-react';
 
 export const LoginPage = () => {
   const navigate = useNavigate();
-  const { login, isLoading, error } = useAuthStore();
+  const { sendCode, loginWithCode, isLoading, error } = useAuthStore();
   
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [code, setCode] = useState('');
   const [msg, setMsg] = useState('');
+  const [codeSent, setCodeSent] = useState(false);
+  const [countdown, setCountdown] = useState(0);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Countdown timer logic
+  useEffect(() => {
+    if (countdown > 0) {
+      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+      return () => clearTimeout(timer); // Cleanup on unmount or re-render
+    }
+  }, [countdown]);
+
+  const handleSendCode = async () => {
+    setMsg('');
+    if (!email) {
+      setMsg('请输入邮箱地址');
+      return;
+    }
+    
+    // Simple email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        setMsg('请输入有效的邮箱地址');
+        return;
+    }
+
+    const success = await sendCode(email);
+    if (success) {
+      setCodeSent(true);
+      setCountdown(60);
+      setMsg('验证码已发送，请查收邮件');
+    }
+  };
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setMsg('');
     
-    // 对于软登录模式，密码不是必须的，甚至邮箱也只是一个标识符
-    if (!email) {
-      setMsg('请输入邮箱 / 身份ID');
+    if (!code) {
+      setMsg('请输入验证码');
       return;
     }
 
     try {
-      await login(email, password);
-      navigate('/'); // 登录成功跳转首页
+      await loginWithCode(email, code);
+      navigate('/'); // Redirect to home on success
     } catch (err) {
-      // 错误信息已经在 store 中处理
+      // Error handled in store
     }
   };
 
@@ -34,54 +65,86 @@ export const LoginPage = () => {
       <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8 relative">
         <div className="text-center mb-8 mt-4">
           <h1 className="text-2xl font-bold text-slate-800">
-            登录 / 同步
+            验证码登录
           </h1>
           <p className="text-slate-500 mt-2 text-sm">
-            输入任意邮箱以标识您的身份（无需注册）
+            无需记忆密码，使用邮箱验证码快捷登录
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleLogin} className="space-y-6">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">邮箱 / 身份ID</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 rounded-lg bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-400 transition-all"
-              placeholder="your-email@example.com"
-            />
+            <label className="block text-sm font-medium text-slate-700 mb-1">邮箱地址</label>
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 rounded-lg bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-400 transition-all"
+                placeholder="your-email@example.com"
+                disabled={codeSent && countdown > 0} // Optional: lock email while countdown is active
+              />
+            </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">密码 (可选)</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 rounded-lg bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-400 transition-all"
-              placeholder="任意输入即可"
-            />
-          </div>
+          {codeSent && (
+            <div className="animate-in fade-in slide-in-from-top-4 duration-300">
+              <label className="block text-sm font-medium text-slate-700 mb-1">验证码</label>
+              <input
+                type="text"
+                value={code}
+                onChange={(e) => setCode(e.target.value.trim())}
+                className="w-full px-4 py-3 rounded-lg bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-400 transition-all tracking-widest text-center text-lg font-mono"
+                placeholder="输入6位验证码"
+                maxLength={6}
+              />
+            </div>
+          )}
 
           {(error || msg) && (
-            <div className="text-red-500 text-sm text-center bg-red-50 p-2 rounded-lg">
+            <div className={`text-sm text-center p-2 rounded-lg ${error ? 'bg-red-50 text-red-500' : 'bg-blue-50 text-blue-500'}`}>
               {error || msg}
             </div>
           )}
 
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full py-3 bg-slate-900 text-white rounded-lg font-medium hover:bg-slate-800 transition-colors flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
-          >
-            {isLoading && <Loader2 className="animate-spin" size={18} />}
-            登 录
-          </button>
+          <div className="space-y-3">
+            {!codeSent ? (
+              <button
+                type="button"
+                onClick={handleSendCode}
+                disabled={isLoading}
+                className="w-full py-3 bg-slate-900 text-white rounded-lg font-medium hover:bg-slate-800 transition-colors flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+              >
+                {isLoading && <Loader2 className="animate-spin" size={18} />}
+                发送验证码
+              </button>
+            ) : (
+              <>
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full py-3 bg-slate-900 text-white rounded-lg font-medium hover:bg-slate-800 transition-colors flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                >
+                  {isLoading && <Loader2 className="animate-spin" size={18} />}
+                  确认登录
+                </button>
+                
+                <button
+                  type="button"
+                  onClick={handleSendCode}
+                  disabled={countdown > 0 || isLoading}
+                  className="w-full py-2 text-slate-500 text-sm hover:text-slate-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {countdown > 0 ? `${countdown}秒后可重新发送` : '没有收到？重新发送'}
+                </button>
+              </>
+            )}
+          </div>
         </form>
 
         <div className="mt-6 text-center text-xs text-slate-400">
-          如需新账号，请联系管理员手动创建
+          未注册的邮箱将自动创建账号
         </div>
       </div>
     </div>
