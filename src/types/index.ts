@@ -1,10 +1,12 @@
+export type RecordType = 'mood' | 'harvest' | 'health';
+
 export interface MoodRecord {
   id: string;
   timestamp: number;
   score: number; // 0-100. For harvest: 0, 25, 50, 75, 100
   note: string;
   images?: string[]; // Array of CloudBase FileIDs
-  type?: 'mood' | 'harvest';
+  type?: RecordType;
   date?: string; // ISO date string for compatibility
   deletedAt?: number;
 }

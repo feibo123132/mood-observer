@@ -4,18 +4,22 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, getDay,
 import { zhCN } from 'date-fns/locale';
 import { getMoodState } from '../utils/moodUtils';
 import { getHarvestLevel } from '../utils/harvestUtils';
-import { ArrowLeft, CheckSquare, Trash2, Square, ChevronDown, ChevronRight, Trees, Map, PenLine, ChevronLeft } from 'lucide-react';
+import { getHealthStateByScore } from '../utils/healthUtils';
+import { ArrowLeft, CheckSquare, Trash2, Square, ChevronDown, ChevronRight, Trees, Map, PenLine, ChevronLeft, HeartPulse } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RecordEditModal } from '../components/RecordEditModal';
 import { RecordCreationModal } from '../components/RecordCreationModal';
-import { MoodRecord } from '../types';
+import { MoodRecord, RecordType } from '../types';
+
+type CalendarMode = 'emotion' | 'health';
 
 export const CalendarPage = () => {
   const navigate = useNavigate();
   const { records, deleteMultipleRecords } = useMoodStore();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
+  const [calendarMode, setCalendarMode] = useState<CalendarMode>('emotion');
   const [editingRecord, setEditingRecord] = useState<MoodRecord | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   
@@ -25,22 +29,39 @@ export const CalendarPage = () => {
 
   // Collapsible sections state
   const [expandedSections, setExpandedSections] = useState({
-    mood: true,
-    harvest: true
+    mood: false,
+    harvest: false,
+    health: false
   });
 
-  const toggleSection = (type: 'mood' | 'harvest') => {
+  const toggleSection = (type: RecordType) => {
     setExpandedSections(prev => ({
       ...prev,
       [type]: !prev[type]
     }));
   };
+  const isHealthCalendar = calendarMode === 'health';
 
-  // Aggregate daily stats
-  const dailyStats = useMemo(() => {
+  // Aggregate daily stats for emotion + harvest records
+  const emotionDailyStats = useMemo(() => {
     const stats: Record<string, { total: number; count: number; min: number; max: number }> = {};
     records.forEach(r => {
-      // 允许所有类型的记录参与统计（包括 harvest），以确保日历颜色能反映当天最高分
+      if (r.deletedAt || r.type === 'health') return;
+      const dateKey = format(new Date(r.timestamp), 'yyyy-MM-dd');
+      if (!stats[dateKey]) stats[dateKey] = { total: 0, count: 0, min: 100, max: 0 };
+      stats[dateKey].total += r.score;
+      stats[dateKey].count += 1;
+      stats[dateKey].min = Math.min(stats[dateKey].min, r.score);
+      stats[dateKey].max = Math.max(stats[dateKey].max, r.score);
+    });
+    return stats;
+  }, [records]);
+
+  // Aggregate daily stats for health records
+  const healthDailyStats = useMemo(() => {
+    const stats: Record<string, { total: number; count: number; min: number; max: number }> = {};
+    records.forEach(r => {
+      if (r.deletedAt || r.type !== 'health') return;
       const dateKey = format(new Date(r.timestamp), 'yyyy-MM-dd');
       if (!stats[dateKey]) stats[dateKey] = { total: 0, count: 0, min: 100, max: 0 };
       stats[dateKey].total += r.score;
@@ -62,12 +83,14 @@ export const CalendarPage = () => {
 
   const getDayColor = (date: Date) => {
     const key = format(date, 'yyyy-MM-dd');
-    const stat = dailyStats[key];
+    const stat = isHealthCalendar ? healthDailyStats[key] : emotionDailyStats[key];
     if (!stat) return 'transparent';
     
     // New logic: if no records below 50, use max score; otherwise use average
     const scoreToUse = stat.min >= 50 ? stat.max : Math.round(stat.total / stat.count);
-    return getMoodState(scoreToUse).color;
+    return isHealthCalendar
+      ? getHealthStateByScore(scoreToUse).color
+      : getMoodState(scoreToUse).color;
   };
 
   const selectedRecords = useMemo(() => {
@@ -75,17 +98,21 @@ export const CalendarPage = () => {
     return records
       .filter(r => !r.deletedAt) // Filter deleted records
       .filter(r => isSameDay(new Date(r.timestamp), selectedDate))
+      .filter(r => isHealthCalendar ? r.type === 'health' : r.type !== 'health')
       .sort((a, b) => b.timestamp - a.timestamp); // Newest first
-  }, [selectedDate, records]);
+  }, [selectedDate, records, isHealthCalendar]);
 
   const groupedRecords = useMemo(() => {
     const groups = {
       mood: [] as MoodRecord[],
-      harvest: [] as MoodRecord[]
+      harvest: [] as MoodRecord[],
+      health: [] as MoodRecord[]
     };
     selectedRecords.forEach(record => {
       if (record.type === 'harvest') {
         groups.harvest.push(record);
+      } else if (record.type === 'health') {
+        groups.health.push(record);
       } else {
         groups.mood.push(record); // 'mood' or undefined defaults to mood
       }
@@ -109,6 +136,16 @@ export const CalendarPage = () => {
       setSelectedIds(new Set());
       setIsSelectionMode(false);
     }
+  };
+
+  const handleCalendarModeToggle = () => {
+    setCalendarMode(prev => prev === 'emotion' ? 'health' : 'emotion');
+    setSelectedIds(new Set());
+    setIsSelectionMode(false);
+    setExpandedSections(prev => ({
+      ...prev,
+      health: true
+    }));
   };
 
   return (
@@ -137,7 +174,13 @@ export const CalendarPage = () => {
           </button>
         </div>
 
-        <div className="w-10" />
+        <button
+          onClick={handleCalendarModeToggle}
+          className="px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-600 bg-white border border-slate-200 hover:bg-slate-100 transition-colors"
+          title="日历切换"
+        >
+          {isHealthCalendar ? '切到情绪' : '切到健康'}
+        </button>
       </div>
 
       <div className="w-full max-w-md px-6 pb-6">
@@ -235,7 +278,7 @@ export const CalendarPage = () => {
             ) : (
               <div className="space-y-6">
                 {/* Mood Section - 情绪之森 */}
-                {groupedRecords.mood.length > 0 && (
+                {!isHealthCalendar && groupedRecords.mood.length > 0 && (
                   <div className="space-y-2">
                     <button 
                       onClick={() => toggleSection('mood')}
@@ -333,7 +376,7 @@ export const CalendarPage = () => {
                 )}
 
                 {/* Harvest Section - 宝藏之旅 */}
-                {groupedRecords.harvest.length > 0 && (
+                {!isHealthCalendar && groupedRecords.harvest.length > 0 && (
                   <div className="space-y-2">
                     <button 
                       onClick={() => toggleSection('harvest')}
@@ -412,6 +455,103 @@ export const CalendarPage = () => {
                                       <span 
                                         className="text-xs font-bold px-2 py-0.5 rounded-full text-white"
                                         style={{ backgroundColor: level.color }}
+                                      >
+                                        {record.score}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <p className="text-slate-700 text-sm leading-relaxed">
+                                    {record.note}
+                                  </p>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                )}
+
+                {/* Health Section - 健康记录 */}
+                {isHealthCalendar && groupedRecords.health.length > 0 && (
+                  <div className="space-y-2">
+                    <button
+                      onClick={() => toggleSection('health')}
+                      className="flex items-center gap-2 text-slate-800 font-medium w-full hover:bg-slate-100 p-2 rounded-lg transition-colors"
+                    >
+                      {expandedSections.health ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+                      <HeartPulse size={18} className="text-rose-500" />
+                      <span>健康记录</span>
+                      <span className="text-xs text-slate-400 font-normal ml-auto">{groupedRecords.health.length}</span>
+                    </button>
+
+                    <AnimatePresence>
+                      {expandedSections.health && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          className="space-y-3 overflow-hidden"
+                        >
+                          {groupedRecords.health.map(record => {
+                            const healthState = getHealthStateByScore(record.score);
+                            return (
+                              <div key={record.id} className="flex gap-4 items-center relative pl-4 border-l-2 border-slate-100 last:border-transparent">
+                                <AnimatePresence initial={false}>
+                                  {isSelectionMode && (
+                                    <motion.div
+                                      initial={{ width: 0, opacity: 0, marginRight: 0 }}
+                                      animate={{ width: 'auto', opacity: 1, marginRight: 8 }}
+                                      exit={{ width: 0, opacity: 0, marginRight: 0 }}
+                                      className="overflow-hidden"
+                                    >
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          toggleSelection(record.id);
+                                        }}
+                                        className="p-1"
+                                      >
+                                        {selectedIds.has(record.id) ? (
+                                          <CheckSquare size={20} className="text-slate-800" />
+                                        ) : (
+                                          <Square size={20} className="text-slate-300" />
+                                        )}
+                                      </button>
+                                    </motion.div>
+                                  )}
+                                </AnimatePresence>
+
+                                <div
+                                  className="absolute -left-[5px] top-1.5 w-2.5 h-2.5 rounded-full border border-white shadow-sm ring-2 ring-slate-50"
+                                  style={{ background: healthState.color }}
+                                />
+                                <div
+                                  onClick={() => {
+                                    if (isSelectionMode) {
+                                      toggleSelection(record.id);
+                                    } else {
+                                      setEditingRecord(record);
+                                    }
+                                  }}
+                                  className={`flex-1 bg-white p-4 rounded-xl shadow-sm border transition-all group cursor-pointer ${
+                                    isSelectionMode && selectedIds.has(record.id)
+                                      ? 'border-slate-400 ring-1 ring-slate-400'
+                                      : 'border-slate-100 hover:shadow-md'
+                                  }`}
+                                >
+                                  <div className="flex justify-between items-center mb-2">
+                                    <span className="text-xs text-slate-400 font-mono">
+                                      {format(new Date(record.timestamp), 'HH:mm')}
+                                    </span>
+                                    <div className="flex items-center gap-3">
+                                      <span className="text-xs font-bold text-slate-300 uppercase">
+                                        {healthState.label}
+                                      </span>
+                                      <span
+                                        className="text-xs font-bold px-2 py-0.5 rounded-full text-white"
+                                        style={{ backgroundColor: healthState.color }}
                                       >
                                         {record.score}
                                       </span>

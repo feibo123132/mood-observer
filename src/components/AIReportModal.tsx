@@ -10,7 +10,7 @@ interface AIReportModalProps {
   onClose: () => void;
   moodScores: number[];
   notes: string[];
-  types?: ('mood' | 'harvest')[]; // Added types prop
+  types?: ('mood' | 'harvest' | 'health')[]; // Added types prop
   weekNumber: number;
   year: number;
   customPrompt?: string;

@@ -131,3 +131,4 @@ useEffect(() => {
 -   **"Identity Source Not Enabled"**: Check CloudBase Console settings.
 -   **"Cannot read properties of undefined (reading 'uid')"**: Ensure `initAuth` has strict null checks for `loginState.user`.
 -   **"Invalid verification code"**: Ensure `verificationInfo` is passed correctly and context hasn't expired.
+-   **"auth.getVerificationCode is not a function"**: Common API hallucination. The correct method name is `auth.getVerification`, NOT `getVerificationCode`. Also ensure you do NOT use spread operator in `signInWithEmail`.

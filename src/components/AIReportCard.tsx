@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 interface AIReportCardProps {
   moodScores: number[];
   notes: string[];
-  types?: ('mood' | 'harvest')[];
+  types?: ('mood' | 'harvest' | 'health')[];
   weekNumber: number;
   year: number;
 }

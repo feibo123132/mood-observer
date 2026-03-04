@@ -19,7 +19,7 @@ interface ExtendedMoodRecord {
   timestamp: number;
   score: number;
   note: string;
-  type?: 'mood' | 'harvest';
+  type?: 'mood' | 'harvest' | 'health';
   date: string;
 }
 

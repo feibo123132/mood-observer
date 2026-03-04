@@ -1,13 +1,13 @@
 import { X, Save, Trash2, Calendar, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MoodRecord } from '../types';
-import { getMoodState, getGradientColor } from '../utils/moodUtils';
-import { getHarvestLevel } from '../utils/harvestUtils';
 import { format } from 'date-fns';
-import { zhCN } from 'date-fns/locale';
 import { useState, useEffect } from 'react';
-import { useMoodStore } from '../store/useMoodStore';
 import { MoodSlider } from './MoodSlider';
+import { MoodRecord } from '../types';
+import { useMoodStore } from '../store/useMoodStore';
+import { getMoodState } from '../utils/moodUtils';
+import { getHarvestLevel } from '../utils/harvestUtils';
+import { getHealthStateByScore, getHealthStates } from '../utils/healthUtils';
 
 interface RecordEditModalProps {
   record: MoodRecord | null;
@@ -42,43 +42,44 @@ export const RecordEditModal = ({ record, onClose }: RecordEditModalProps) => {
 
   if (!record) return null;
 
-  const moodState = record.type === 'harvest' 
-    ? { label: getHarvestLevel(score).label, color: getHarvestLevel(score).color, emoji: score === 0 ? '😐' : '🎁' }
-    : getMoodState(score);
+  const state =
+    record.type === 'harvest'
+      ? { label: getHarvestLevel(score).label, color: getHarvestLevel(score).color }
+      : record.type === 'health'
+        ? { label: getHealthStateByScore(score).label, color: getHealthStateByScore(score).color }
+        : getMoodState(score);
 
   return (
     <AnimatePresence>
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/20 backdrop-blur-sm p-4"
       >
-        <motion.div 
+        <motion.div
           initial={{ y: '100%' }}
           animate={{ y: 0 }}
           exit={{ y: '100%' }}
           className="w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden"
         >
-          {/* Header with dynamic color */}
-          <div 
+          <div
             className="p-6 text-center text-white transition-colors duration-500 relative overflow-hidden"
-            style={{ backgroundColor: moodState.color }}
+            style={{ backgroundColor: state.color }}
           >
             <div className="relative z-10">
               <div className="text-5xl font-bold mb-2">{score}</div>
               <div className="text-lg font-medium opacity-90 flex items-center justify-center">
-                <span>{moodState.label}</span>
+                <span>{state.label}</span>
               </div>
             </div>
-            
-            {/* Background decoration */}
+
             <div className="absolute top-0 left-0 w-full h-full opacity-10">
               <div className="absolute -top-10 -right-10 w-40 h-40 bg-white rounded-full blur-3xl" />
               <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-white rounded-full blur-3xl" />
             </div>
 
-            <button 
+            <button
               onClick={onClose}
               className="absolute top-4 right-4 p-4 bg-white/20 hover:bg-white/30 rounded-full transition-colors z-50"
             >
@@ -87,7 +88,6 @@ export const RecordEditModal = ({ record, onClose }: RecordEditModalProps) => {
           </div>
 
           <div className="p-6 space-y-8">
-            {/* Date Time Display */}
             <div className="flex items-center justify-between text-sm text-slate-400 px-2">
               <div className="flex items-center gap-2">
                 <Calendar size={14} />
@@ -99,11 +99,8 @@ export const RecordEditModal = ({ record, onClose }: RecordEditModalProps) => {
               </div>
             </div>
 
-            {/* Note Input */}
             <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">
-                笔记 / 评论
-              </label>
+              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">笔记 / 评论</label>
               <textarea
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
@@ -112,88 +109,96 @@ export const RecordEditModal = ({ record, onClose }: RecordEditModalProps) => {
                 placeholder="记录下当下的感受..."
                 maxLength={300}
               />
-              <div className="text-right text-xs text-slate-400">
-                {note.length}/300
-              </div>
+              <div className="text-right text-xs text-slate-400">{note.length}/300</div>
             </div>
 
-            {/* Score Slider */}
             <div className="mb-6">
               <h3 className="text-sm font-medium text-slate-400 mb-4">调整分数</h3>
+
               {record.type === 'harvest' ? (
-                 /* Harvest Slider using MoodSlider component logic (Customized) */
-                 <div className="w-full max-w-md flex flex-col items-center gap-6">
-                   {/* Text Info */}
-                   <div className="text-center space-y-2">
-                      <h3 className="text-3xl font-bold transition-colors duration-300" style={{ color: moodState.color }}>
-                        {moodState.label}
-                      </h3>
-                      <div className="flex items-center justify-center gap-2 text-sm text-gray-400 font-mono tracking-wider">
-                        SCORE: 
-                        <input
-                          type="number"
-                          min="60"
-                          max="100"
-                          value={score}
-                          onChange={(e) => {
-                            let val = Number(e.target.value);
-                            if (val < 60) val = 60;
-                            if (val > 100) val = 100;
-                            setScore(val);
-                          }}
-                          className="w-12 bg-transparent border-b border-gray-300 focus:border-slate-500 focus:outline-none text-center font-mono"
-                        />
-                      </div>
-                      <p className="text-sm text-slate-500">{getHarvestLevel(score).description}</p>
-                   </div>
-
-                   {/* Custom Harvest Slider Track */}
-                   <div className="w-full h-2 bg-slate-100 rounded-full relative">
-                      {/* Track Background - Colored Segments */}
-                      <div className="absolute inset-0 rounded-full overflow-hidden flex">
-                         <div className="h-full bg-gray-400" style={{ width: '25%' }} />
-                         <div className="h-full bg-green-500" style={{ width: '25%' }} />
-                         <div className="h-full bg-blue-500" style={{ width: '25%' }} />
-                         <div className="h-full bg-purple-500" style={{ width: '15%' }} />
-                         <div className="h-full bg-yellow-500" style={{ width: '10%' }} />
-                      </div>
-
-                      {/* Thumb */}
-                      <div 
-                        className="absolute top-1/2 -translate-y-1/2 w-7 h-7 bg-white rounded-full shadow-md border-4 transition-all duration-75 pointer-events-none z-20"
-                        style={{ 
-                            left: `${(score - 60) / 40 * 100}%`, 
-                            transform: `translate(-50%, -50%)`,
-                            borderColor: moodState.color
-                        }}
-                      />
-
+                <div className="w-full max-w-md flex flex-col items-center gap-6">
+                  <div className="text-center space-y-2">
+                    <h3 className="text-3xl font-bold transition-colors duration-300" style={{ color: state.color }}>
+                      {state.label}
+                    </h3>
+                    <div className="flex items-center justify-center gap-2 text-sm text-gray-400 font-mono tracking-wider">
+                      SCORE:
                       <input
-                        type="range"
+                        type="number"
                         min="60"
                         max="100"
-                        step="1"
                         value={score}
-                        onChange={(e) => setScore(Number(e.target.value))}
-                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-30"
+                        onChange={(e) => {
+                          let val = Number(e.target.value);
+                          if (val < 60) val = 60;
+                          if (val > 100) val = 100;
+                          setScore(val);
+                        }}
+                        className="w-12 bg-transparent border-b border-gray-300 focus:border-slate-500 focus:outline-none text-center font-mono"
                       />
-                   </div>
-                 </div>
+                    </div>
+                    <p className="text-sm text-slate-500">{getHarvestLevel(score).description}</p>
+                  </div>
+
+                  <div className="w-full h-2 bg-slate-100 rounded-full relative">
+                    <div className="absolute inset-0 rounded-full overflow-hidden flex">
+                      <div className="h-full bg-gray-400" style={{ width: '25%' }} />
+                      <div className="h-full bg-green-500" style={{ width: '25%' }} />
+                      <div className="h-full bg-blue-500" style={{ width: '25%' }} />
+                      <div className="h-full bg-purple-500" style={{ width: '15%' }} />
+                      <div className="h-full bg-yellow-500" style={{ width: '10%' }} />
+                    </div>
+
+                    <div
+                      className="absolute top-1/2 -translate-y-1/2 w-7 h-7 bg-white rounded-full shadow-md border-4 transition-all duration-75 pointer-events-none z-20"
+                      style={{
+                        left: `${((score - 60) / 40) * 100}%`,
+                        transform: 'translate(-50%, -50%)',
+                        borderColor: state.color
+                      }}
+                    />
+
+                    <input
+                      type="range"
+                      min="60"
+                      max="100"
+                      step="1"
+                      value={score}
+                      onChange={(e) => setScore(Number(e.target.value))}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-30"
+                    />
+                  </div>
+                </div>
+              ) : record.type === 'health' ? (
+                <div className="grid grid-cols-3 gap-2">
+                  {getHealthStates().map((option) => (
+                    <button
+                      key={option.value}
+                      onClick={() => setScore(option.score)}
+                      className={`rounded-xl border px-3 py-3 text-sm font-medium transition-all ${
+                        getHealthStateByScore(score).value === option.value
+                          ? 'border-slate-700 bg-slate-50 text-slate-800'
+                          : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
               ) : (
                 <MoodSlider value={score} onChange={setScore} />
               )}
             </div>
 
-            {/* Actions */}
             <div className="flex gap-3 pt-2">
-              <button 
+              <button
                 onClick={handleDelete}
                 className="flex-1 py-3 px-4 rounded-xl border border-red-100 text-red-500 font-medium hover:bg-red-50 transition-colors flex items-center justify-center gap-2"
               >
                 <Trash2 size={18} />
                 删除
               </button>
-              <button 
+              <button
                 onClick={handleSave}
                 className="flex-[2] py-3 px-4 rounded-xl bg-slate-900 text-white font-medium hover:bg-slate-800 transition-colors flex items-center justify-center gap-2 shadow-lg shadow-slate-200"
               >
