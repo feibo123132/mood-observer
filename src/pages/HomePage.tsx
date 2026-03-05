@@ -182,12 +182,31 @@ export const HomePage = () => {
 
   const upsertHealthAutoLine = (prefix: string, summary: string) => {
     setHealthNote((prev) => {
+      const recordPrefixes = ['睡眠记录：', '饮食记录：', '运动记录：'];
+      const stripOrderPrefix = (line: string) => line.replace(/^\d+、\s*/, '');
+      const isRecordLine = (line: string) => recordPrefixes.some((p) => line.startsWith(p));
+
       const lines = prev
         .split('\n')
         .map((line) => line.trim())
         .filter(Boolean);
-      const nextLines = lines.filter((line) => !line.startsWith(prefix));
-      nextLines.push(summary);
+
+      const entries = lines.map((line) => stripOrderPrefix(line));
+      const existingIndex = entries.findIndex((line) => line.startsWith(prefix));
+
+      if (existingIndex >= 0) {
+        entries[existingIndex] = summary;
+      } else {
+        entries.push(summary);
+      }
+
+      let recordIndex = 0;
+      const nextLines = entries.map((line) => {
+        if (!isRecordLine(line)) return line;
+        recordIndex += 1;
+        return `${recordIndex}、${line}`;
+      });
+
       return nextLines.join('\n').slice(0, 300);
     });
   };

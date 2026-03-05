@@ -105,9 +105,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
 
     try {
-      // 0. Safety: Clear local data before login to avoid data merging issues
-      useMoodStore.getState().clearLocalData();
-
       // 1. Sign in with email and code
       // CRITICAL: Explicitly pass verificationInfo as per user requirement
       await auth.signInWithEmail({

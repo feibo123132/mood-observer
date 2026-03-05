@@ -55,3 +55,14 @@ export default tseslint.config({
   },
 })
 ```
+
+## Cloud Functions Environment Variables
+
+Set these variables in your CloudBase function environment configuration (do not hardcode in source files):
+
+- `DEEPSEEK_API_KEY`: used by `cloudfunctions/designReport`
+- `VOLC_APPID`: used by `cloudfunctions/generatePodcast`
+- `VOLC_APP_KEY`: used by `cloudfunctions/generatePodcast` (maps to request header `X-Api-App-Key`)
+- `VOLC_TOKEN`: used by `cloudfunctions/generatePodcast` (maps to request header `X-Api-Access-Key`)
+
+If any required variable is missing, the corresponding cloud function now returns a clear error instead of using fallback hardcoded secrets.

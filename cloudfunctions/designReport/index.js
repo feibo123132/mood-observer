@@ -99,8 +99,14 @@ exports.main = async (event, context) => {
     };
   }
 
-  // Use environment variable for API Key
-  const API_KEY = process.env.DEEPSEEK_API_KEY || "sk-307567793d98418f8e0787a052865912"; 
+  // Use environment variable for API Key (required)
+  const API_KEY = process.env.DEEPSEEK_API_KEY;
+  if (!API_KEY) {
+    return {
+      success: false,
+      error: 'Missing DEEPSEEK_API_KEY'
+    };
+  }
   const API_URL = "https://api.deepseek.com/chat/completions";
 
   try {

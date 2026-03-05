@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Sparkles } from 'lucide-react';
 
@@ -9,12 +9,23 @@ interface CustomPromptModalProps {
 }
 
 export const CustomPromptModal = ({ isOpen, onClose, onConfirm }: CustomPromptModalProps) => {
+  const STORAGE_KEY = 'jieyou_custom_prompt_draft';
   const [prompt, setPrompt] = useState('');
+
+  useEffect(() => {
+    const savedPrompt = localStorage.getItem(STORAGE_KEY);
+    if (savedPrompt !== null) {
+      setPrompt(savedPrompt);
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, prompt);
+  }, [prompt]);
 
   const handleSubmit = () => {
     if (prompt.trim()) {
       onConfirm(prompt);
-      setPrompt(''); // Clear after sending
       onClose();
     }
   };

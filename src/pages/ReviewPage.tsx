@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 // Force refresh
 import { ArrowLeft, Clock, ChevronDown, ChevronLeft, ChevronRight, FileText, Trees, BookOpen } from 'lucide-react';
@@ -16,6 +16,7 @@ import { AIReportCard } from '../components/AIReportCard';
 export const ReviewPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const allRecords = useMoodStore((state) => state.records);
   const [activeTab, setActiveTab] = useState<'overall' | 'weekly'>(() => (location.state as any)?.activeTab || 'overall');
   const [sortBy, setSortBy] = useState<SortType>('score_desc');
   const [editingRecord, setEditingRecord] = useState<MoodRecord | null>(null);
@@ -29,6 +30,7 @@ export const ReviewPage = () => {
   const [quarters, setQuarters] = useState<QuarterInfo[]>([]);
   const [selectedQuarterId, setSelectedQuarterId] = useState<number>(1);
   const [selectedWeekId, setSelectedWeekId] = useState<string | null>(null);
+  const weekButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   
   // Collapse State for Week Selector
   const [isWeekSelectorOpen, setIsWeekSelectorOpen] = useState(false);
@@ -85,6 +87,18 @@ export const ReviewPage = () => {
     }
   }, [selectedQuarterId, quarters]);
 
+  // Auto-scroll week list to the currently selected week when selector opens
+  useEffect(() => {
+    if (!isWeekSelectorOpen || !selectedWeekId) return;
+    const target = weekButtonRefs.current[selectedWeekId];
+    if (!target) return;
+    target.scrollIntoView({
+      behavior: 'smooth',
+      block: 'nearest',
+      inline: 'center'
+    });
+  }, [isWeekSelectorOpen, selectedWeekId, selectedQuarterId, quarters]);
+
   // Derived state for selected week info
   const selectedWeek = useMemo(() => {
     for (const q of quarters) {
@@ -107,6 +121,7 @@ export const ReviewPage = () => {
     sortBy, 
     dateRange 
   });
+  const allActiveRecords = useMemo(() => allRecords.filter((record) => !record.deletedAt), [allRecords]);
 
   const [expandedLabel, setExpandedLabel] = useState<string | null>(null);
   const [isMoodExpanded, setIsMoodExpanded] = useState(true);
@@ -417,6 +432,9 @@ export const ReviewPage = () => {
                     {quarters.find(q => q.id === selectedQuarterId)?.weeks.map(week => (
                       <button
                         key={week.id}
+                        ref={(el) => {
+                          weekButtonRefs.current[week.id] = el;
+                        }}
                         onClick={() => setSelectedWeekId(week.id)}
                         className={`flex-shrink-0 px-4 py-2 rounded-xl text-xs font-medium transition-all whitespace-nowrap border flex flex-col items-center justify-center min-w-[80px] ${
                           selectedWeekId === week.id
@@ -439,11 +457,14 @@ export const ReviewPage = () => {
             </AnimatePresence>
 
             {/* AI Analysis Card */}
-            {selectedWeek && weeklyRecords.length > 0 && (
+            {selectedWeek && allActiveRecords.length > 0 && (
               <AIReportCard 
                 moodScores={weeklyRecords.map(r => r.score)} 
                 notes={weeklyRecords.map(r => r.note || '')}
                 types={weeklyRecords.map(r => r.type || 'mood')}
+                allMoodScores={allActiveRecords.map((r) => r.score)}
+                allNotes={allActiveRecords.map((r) => r.note || '')}
+                allTypes={allActiveRecords.map((r) => r.type || 'mood')}
                 weekNumber={selectedWeek.weekNumber}
                 year={selectedYear}
               />

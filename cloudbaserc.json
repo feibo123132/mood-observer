@@ -3,8 +3,20 @@
   "functionRoot": "./cloudfunctions",
   "functions": [
     {
+      "name": "analyzeMood",
+      "timeout": 60,
+      "runtime": "Nodejs16.13",
+      "memorySize": 256
+    },
+    {
       "name": "designReport",
       "timeout": 180,
+      "runtime": "Nodejs16.13",
+      "memorySize": 512
+    },
+    {
+      "name": "generatePodcast",
+      "timeout": 300,
       "runtime": "Nodejs16.13",
       "memorySize": 512
     }

@@ -568,23 +568,33 @@ exports.main = async (event, context) => {
 
   // 1. Env Check
   const APPID = process.env.VOLC_APPID;
+  const APP_KEY = process.env.VOLC_APP_KEY;
   const TOKEN = process.env.VOLC_TOKEN;
   const SERVICE_TYPE = 'volc.service_type.10050';
 
-  if (!APPID || !TOKEN) return { success: false, error: 'Missing credentials' };
+  if (!APPID || !APP_KEY || !TOKEN) {
+    return {
+      success: false,
+      error: 'Missing credentials: VOLC_APPID, VOLC_APP_KEY, VOLC_TOKEN are required'
+    };
+  }
 
   // 2. Setup WebSocket
   const wsUrl = 'wss://openspeech.bytedance.com/api/v3/sami/podcasttts';
   const headers = {
     'X-Api-App-Id': APPID,
-    'X-Api-App-Key': 'aGjiRdfUWi',
+    'X-Api-App-Key': APP_KEY,
     'X-Api-Access-Key': TOKEN,
     'X-Api-Resource-Id': SERVICE_TYPE,
     'X-Api-Connect-Id': uuidv4(),
   };
 
   // Masked debug log
-  console.log('Connecting with headers:', { ...headers, 'X-Api-Access-Key': '****' });
+  console.log('Connecting with headers:', {
+    ...headers,
+    'X-Api-App-Key': '****',
+    'X-Api-Access-Key': '****'
+  });
 
   const ws = new WebSocket(wsUrl, {
     headers,

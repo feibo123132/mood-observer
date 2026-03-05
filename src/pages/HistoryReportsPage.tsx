@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useMoodStore } from '../store/useMoodStore';
 import { format, getWeek, startOfWeek, endOfWeek } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
@@ -10,7 +10,7 @@ import ReportVisualization from '../components/ReportVisualization';
 
 export const HistoryReportsPage = () => {
   const navigate = useNavigate();
-  const { reports, deleteReport } = useMoodStore();
+  const { reports, deleteReport, syncFromCloud } = useMoodStore();
   const [selectedReport, setSelectedReport] = useState<{key: string, content: string, date: string, year: number, week: number} | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -21,6 +21,11 @@ export const HistoryReportsPage = () => {
   const [isDesigning, setIsDesigning] = useState(false);
   const [designRetryMode, setDesignRetryMode] = useState(false);
   const [reportHtml, setReportHtml] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Ensure reports are refreshed when entering history page.
+    syncFromCloud().catch((err) => console.error('Sync on history page failed:', err));
+  }, [syncFromCloud]);
 
   const handleGeneratePodcast = async (content: string, year: number, week: number) => {
     if (isGenerating) return;

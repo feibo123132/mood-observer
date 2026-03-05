@@ -113,7 +113,12 @@ export const AIReportModal = ({
       }
     } catch (err: any) {
       console.error('Analysis failed:', err);
-      setErrorMsg(err.message || '连接云端服务失败');
+      const rawMsg = err?.message || '连接云端服务失败';
+      const friendlyMsg =
+        rawMsg.includes('Missing DEEPSEEK_API_KEY') || rawMsg.includes('缺少 API 密钥')
+          ? '周报服务未配置密钥：请在云函数 analyzeMood 的环境变量中设置 DEEPSEEK_API_KEY。'
+          : rawMsg;
+      setErrorMsg(friendlyMsg);
       setStatus('error');
     }
   };

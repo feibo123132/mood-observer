@@ -39,6 +39,47 @@ interface MoodState {
   deduplicateCloudData: () => Promise<void>;
 }
 
+const resolveCurrentEmail = async (): Promise<string | null> => {
+  const cachedEmail = localStorage.getItem('mood_user_email');
+  if (cachedEmail) return cachedEmail;
+
+  try {
+    const loginState = await auth.getLoginState();
+    const email = loginState?.user?.email;
+    if (email) {
+      localStorage.setItem('mood_user_email', email);
+      return email;
+    }
+  } catch (err) {
+    console.error('Resolve current email failed:', err);
+  }
+
+  return null;
+};
+
+const REPORT_BACKUP_KEY = 'mood_reports_backup_v1';
+
+const readReportBackup = (): Record<string, string> => {
+  try {
+    const raw = localStorage.getItem(REPORT_BACKUP_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return {};
+    return parsed as Record<string, string>;
+  } catch (err) {
+    console.error('Read report backup failed:', err);
+    return {};
+  }
+};
+
+const writeReportBackup = (reports: Record<string, string>) => {
+  try {
+    localStorage.setItem(REPORT_BACKUP_KEY, JSON.stringify(reports));
+  } catch (err) {
+    console.error('Write report backup failed:', err);
+  }
+};
+
 export const useMoodStore = create<MoodState>()(
   persist(
     (set, get) => ({
@@ -66,9 +107,10 @@ export const useMoodStore = create<MoodState>()(
         set((state) => ({
           reports: { ...state.reports, [`${year}-${week}`]: content }
         }));
+        writeReportBackup(get().reports);
 
         // 2. Sync to Cloud
-        const currentEmail = localStorage.getItem('mood_user_email');
+        const currentEmail = await resolveCurrentEmail();
         if (currentEmail) {
           try {
             const collection = db.collection('mood_reports');
@@ -98,9 +140,10 @@ export const useMoodStore = create<MoodState>()(
           delete newReports[`${year}-${week}`];
           return { reports: newReports };
         });
+        writeReportBackup(get().reports);
 
         // 2. Sync to Cloud
-        const currentEmail = localStorage.getItem('mood_user_email');
+        const currentEmail = await resolveCurrentEmail();
         if (currentEmail) {
           try {
             await db.collection('mood_reports')
@@ -124,8 +167,13 @@ export const useMoodStore = create<MoodState>()(
 
       syncFromCloud: async () => {
         // 使用软身份验证
-        const currentEmail = localStorage.getItem('mood_user_email');
+        const currentEmail = await resolveCurrentEmail();
         if (!currentEmail) return;
+
+        const backupReports = readReportBackup();
+        if (Object.keys(get().reports).length === 0 && Object.keys(backupReports).length > 0) {
+          set({ reports: backupReports });
+        }
 
         // 确保连接
         const loginState = await auth.getLoginState();
@@ -217,22 +265,57 @@ export const useMoodStore = create<MoodState>()(
 
           // 4. Sync Reports
           try {
-            const reportRes = await db.collection('mood_reports')
+            const reportCollection = db.collection('mood_reports');
+            const localReportsSnapshot = { ...get().reports };
+            const reportRes = await reportCollection
               .where({ userId: currentEmail })
               .limit(1000) // Assuming user won't have >1000 reports soon
               .get();
-            
-            if (reportRes.data && reportRes.data.length > 0) {
-              const cloudReports = reportRes.data.reduce((acc: any, curr: any) => {
-                acc[`${curr.year}-${curr.week}`] = curr.content;
-                return acc;
-              }, {});
 
-              // Merge: Cloud wins or Local wins? Let's merge.
+            const cloudReports = (reportRes.data || []).reduce((acc: any, curr: any) => {
+              acc[`${curr.year}-${curr.week}`] = curr.content;
+              return acc;
+            }, {});
+
+            // Merge cloud into local cache.
+            if (Object.keys(cloudReports).length > 0) {
               set((state) => ({
                 reports: { ...state.reports, ...cloudReports }
               }));
+              writeReportBackup(get().reports);
               console.log(`同步了 ${reportRes.data.length} 份情绪报告`);
+            }
+
+            // Backfill: if cloud is missing some local reports, push them up.
+            const cloudKeys = new Set(Object.keys(cloudReports));
+            const reportsToBackfill = Object.entries(localReportsSnapshot).filter(
+              ([key, content]) => Boolean(content) && !cloudKeys.has(key)
+            );
+
+            if (reportsToBackfill.length > 0) {
+              await Promise.all(
+                reportsToBackfill.map(async ([key, content]) => {
+                  const [year, week] = key.split('-').map(Number);
+                  if (!year || !week) return;
+
+                  const query = reportCollection.where({ year, week, userId: currentEmail });
+                  const countRes = await query.count();
+
+                  if (countRes.total > 0) {
+                    await query.update({ content, updateTime: new Date().toISOString() });
+                  } else {
+                    await reportCollection.add({
+                      year,
+                      week,
+                      content,
+                      userId: currentEmail,
+                      createTime: new Date().toISOString()
+                    });
+                  }
+                })
+              );
+              console.log(`回填了 ${reportsToBackfill.length} 份本地情绪报告到云端`);
+              writeReportBackup(get().reports);
             }
           } catch (e) {
             console.error('Sync reports failed:', e);

@@ -9,16 +9,29 @@ interface AIReportCardProps {
   moodScores: number[];
   notes: string[];
   types?: ('mood' | 'harvest' | 'health')[];
+  allMoodScores?: number[];
+  allNotes?: string[];
+  allTypes?: ('mood' | 'harvest' | 'health')[];
   weekNumber: number;
   year: number;
 }
 
-export const AIReportCard = ({ moodScores, notes, types = [], weekNumber, year }: AIReportCardProps) => {
+export const AIReportCard = ({
+  moodScores,
+  notes,
+  types = [],
+  allMoodScores = [],
+  allNotes = [],
+  allTypes = [],
+  weekNumber,
+  year
+}: AIReportCardProps) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [activeMenu, setActiveMenu] = useState<'none' | 'time' | 'custom'>('none');
   const [isCustomPromptModalOpen, setIsCustomPromptModalOpen] = useState(false);
   const [customPrompt, setCustomPrompt] = useState('');
+  const [analysisRange, setAnalysisRange] = useState<'weekly' | 'all'>('weekly');
   
   const dropdownRef = useRef<HTMLDivElement>(null);
   
@@ -35,11 +48,13 @@ export const AIReportCard = ({ moodScores, notes, types = [], weekNumber, year }
   }, []);
 
   const handleGenerate = () => {
+    setAnalysisRange('weekly');
     setCustomPrompt(''); // Reset custom prompt for standard generation
     setIsModalOpen(true);
   };
 
   const handleCustomPrompt = (prompt: string) => {
+    setAnalysisRange('all');
     setCustomPrompt(prompt);
     setIsModalOpen(true);
   };
@@ -165,9 +180,9 @@ export const AIReportCard = ({ moodScores, notes, types = [], weekNumber, year }
       {isModalOpen && (
         <AIReportModal
           isOpen={isModalOpen}
-          moodScores={moodScores}
-          notes={notes}
-          types={types}
+          moodScores={analysisRange === 'all' && allMoodScores.length > 0 ? allMoodScores : moodScores}
+          notes={analysisRange === 'all' && allNotes.length > 0 ? allNotes : notes}
+          types={analysisRange === 'all' && allTypes.length > 0 ? allTypes : types}
           weekNumber={weekNumber}
           year={year}
           customPrompt={customPrompt || undefined}
