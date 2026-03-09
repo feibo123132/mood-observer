@@ -41,11 +41,11 @@ const SIZE_OPTIONS = ['小', '中', '大'];
 
 const DIET_OPTIONS = {
   staple: ['不记', '米饭', '红薯', '玉米', '面条', '炒粉'],
-  protein: ['不记', '鸡蛋', '大豆', '猪肉', '豆腐类', '鸡肉', '鸭肉', '牛肉', '鱼肉', '章鱼', '生蚝'],
-  vegetable: ['不记', '白菜', '芥菜', '番茄', '红萝卜', '白萝卜', '莴苣', '花菜', '南瓜', '冬瓜', '云南小瓜', '蘑菇', '木耳', '青椒', '豆芽'],
+  protein: ['不记', '鸡蛋', '大豆', '猪肉', '猪杂', '豆腐类', '鸡肉', '鸭肉', '牛肉', '鱼肉', '章鱼', '生蚝'],
+  vegetable: ['不记', '白菜', '芥菜', '番茄', '红萝卜', '白萝卜', '莴苣', '花菜', '南瓜', '冬瓜', '云南小瓜', '蘑菇', '木耳', '青椒', '豆芽', '洋葱'],
   fruit: ['不记', '沃柑', '砂糖橘', '圣女果', '香蕉', '苹果'],
   beverage: ['不记', '奶茶', '可乐', '冰红茶'],
-  snack: ['不记', '蛋糕', '饼干', '面包', '辣条', '手抓饼', '糖果'],
+  snack: ['不记', '蛋糕', '饼干', '面包', '辣条', '手抓饼', '糖果', '汉堡', '脆骨串', '酱香饼'],
   other: ['不记', '酸菜', '酸笋']
 };
 type DietSectionKey = keyof typeof DIET_OPTIONS;
@@ -1116,6 +1116,10 @@ export const ExerciseRecordModal = ({ isOpen, onClose, onConfirm }: QuickRecordM
   const [anaerobicType, setAnaerobicType] = useState('不记');
   const [anaerobicAmount, setAnaerobicAmount] = useState('');
   const [anaerobicCustom, setAnaerobicCustom] = useState('');
+  const [confirmedExercises, setConfirmedExercises] = useState<{ aerobic: string[]; anaerobic: string[] }>({
+    aerobic: [],
+    anaerobic: []
+  });
 
   const toPositiveInt = (value: string) => {
     const parsed = Number(value);
@@ -1133,25 +1137,68 @@ export const ExerciseRecordModal = ({ isOpen, onClose, onConfirm }: QuickRecordM
     return '个';
   };
 
+  const buildExerciseItem = (type: string, amount: string, custom: string, unit: string) => {
+    const detail = [
+      toPositiveInt(amount) > 0 ? `${toPositiveInt(amount)}${unit}` : '',
+      custom.trim()
+    ].filter(Boolean) as string[];
+    return `${type}${detail.length > 0 ? `(${detail.join('，')})` : ''}`;
+  };
+
+  const addConfirmedExercise = (kind: 'aerobic' | 'anaerobic', item: string) => {
+    setConfirmedExercises((prev) => ({
+      ...prev,
+      [kind]: [...prev[kind], item]
+    }));
+  };
+
+  const removeConfirmedExercise = (kind: 'aerobic' | 'anaerobic', index: number) => {
+    setConfirmedExercises((prev) => ({
+      ...prev,
+      [kind]: prev[kind].filter((_, i) => i !== index)
+    }));
+  };
+
+  const updateConfirmedExercise = (kind: 'aerobic' | 'anaerobic', index: number, nextValue: string) => {
+    setConfirmedExercises((prev) => ({
+      ...prev,
+      [kind]: prev[kind].map((item, i) => (i === index ? nextValue : item))
+    }));
+  };
+
+  const handleAddAerobic = () => {
+    if (aerobicType === '不记') return;
+    const item = buildExerciseItem(aerobicType, aerobicAmount, aerobicCustom, getAerobicUnit(aerobicType));
+    addConfirmedExercise('aerobic', item);
+    setAerobicType('不记');
+    setAerobicAmount('');
+    setAerobicCustom('');
+  };
+
+  const handleAddAnaerobic = () => {
+    if (anaerobicType === '不记') return;
+    const item = buildExerciseItem(anaerobicType, anaerobicAmount, anaerobicCustom, getAnaerobicUnit(anaerobicType));
+    addConfirmedExercise('anaerobic', item);
+    setAnaerobicType('不记');
+    setAnaerobicAmount('');
+    setAnaerobicCustom('');
+  };
+
+  const allConfirmedExercises = useMemo(
+    () => [
+      ...confirmedExercises.aerobic.map((item) => `有氧·${item}`),
+      ...confirmedExercises.anaerobic.map((item) => `无氧·${item}`)
+    ],
+    [confirmedExercises]
+  );
+
   const handleConfirm = () => {
     const sections: string[] = [];
-
-    if (aerobicType !== '不记') {
-      const aerobicUnit = getAerobicUnit(aerobicType);
-      const aerobicDetail = [
-        toPositiveInt(aerobicAmount) > 0 ? `量化${toPositiveInt(aerobicAmount)}${aerobicUnit}` : '',
-        aerobicCustom.trim()
-      ].filter(Boolean) as string[];
-      sections.push(`有氧 ${aerobicType}${aerobicDetail.length > 0 ? `(${aerobicDetail.join('，')})` : ''}`);
+    if (confirmedExercises.aerobic.length > 0) {
+      sections.push(`①有氧运动：${confirmedExercises.aerobic.join('、')}`);
     }
-
-    if (anaerobicType !== '不记') {
-      const anaerobicUnit = getAnaerobicUnit(anaerobicType);
-      const anaerobicDetail = [
-        toPositiveInt(anaerobicAmount) > 0 ? `量化${toPositiveInt(anaerobicAmount)}${anaerobicUnit}` : '',
-        anaerobicCustom.trim()
-      ].filter(Boolean) as string[];
-      sections.push(`无氧 ${anaerobicType}${anaerobicDetail.length > 0 ? `(${anaerobicDetail.join('，')})` : ''}`);
+    if (confirmedExercises.anaerobic.length > 0) {
+      sections.push(`②无氧运动：${confirmedExercises.anaerobic.join('、')}`);
     }
 
     const summary = sections.length > 0 ? `运动记录：${sections.join('；')}。` : '运动记录：不记具体内容。';
@@ -1173,11 +1220,26 @@ export const ExerciseRecordModal = ({ isOpen, onClose, onConfirm }: QuickRecordM
           <div className="grid grid-cols-1 gap-3">
             <FoodOptionGrid label="项目" options={AEROBIC_OPTIONS} value={aerobicType} onChange={setAerobicType} />
             {aerobicType !== '不记' && (
-              <div className="grid grid-cols-2 gap-3">
-                <CountInput label="量化" unit={getAerobicUnit(aerobicType)} value={aerobicAmount} onChange={setAerobicAmount} />
-                <TextInput label="自定义/额外描述" value={aerobicCustom} placeholder="自定义描述" onChange={setAerobicCustom} />
-              </div>
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  <CountInput label="量化" unit={getAerobicUnit(aerobicType)} value={aerobicAmount} onChange={setAerobicAmount} />
+                  <TextInput label="自定义/额外描述" value={aerobicCustom} placeholder="自定义描述" onChange={setAerobicCustom} />
+                </div>
+                <button
+                  type="button"
+                  onClick={handleAddAerobic}
+                  className="w-full py-2.5 rounded-xl bg-slate-900 text-white text-sm font-medium hover:bg-slate-800 transition-colors"
+                >
+                  确认加入
+                </button>
+              </>
             )}
+            <ConfirmedFoodList
+              title="已加入（有氧运动）"
+              items={confirmedExercises.aerobic}
+              onDelete={(index) => removeConfirmedExercise('aerobic', index)}
+              onEdit={(index, next) => updateConfirmedExercise('aerobic', index, next)}
+            />
           </div>
         </div>
 
@@ -1186,12 +1248,45 @@ export const ExerciseRecordModal = ({ isOpen, onClose, onConfirm }: QuickRecordM
           <div className="grid grid-cols-1 gap-3">
             <FoodOptionGrid label="项目" options={ANAEROBIC_OPTIONS} value={anaerobicType} onChange={setAnaerobicType} />
             {anaerobicType !== '不记' && (
-              <div className="grid grid-cols-2 gap-3">
-                <CountInput label="量化" unit={getAnaerobicUnit(anaerobicType)} value={anaerobicAmount} onChange={setAnaerobicAmount} />
-                <TextInput label="自定义/额外描述" value={anaerobicCustom} placeholder="自定义描述" onChange={setAnaerobicCustom} />
-              </div>
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  <CountInput label="量化" unit={getAnaerobicUnit(anaerobicType)} value={anaerobicAmount} onChange={setAnaerobicAmount} />
+                  <TextInput label="自定义/额外描述" value={anaerobicCustom} placeholder="自定义描述" onChange={setAnaerobicCustom} />
+                </div>
+                <button
+                  type="button"
+                  onClick={handleAddAnaerobic}
+                  className="w-full py-2.5 rounded-xl bg-slate-900 text-white text-sm font-medium hover:bg-slate-800 transition-colors"
+                >
+                  确认加入
+                </button>
+              </>
             )}
+            <ConfirmedFoodList
+              title="已加入（无氧运动）"
+              items={confirmedExercises.anaerobic}
+              onDelete={(index) => removeConfirmedExercise('anaerobic', index)}
+              onEdit={(index, next) => updateConfirmedExercise('anaerobic', index, next)}
+            />
           </div>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+          <p className="text-sm font-medium text-slate-700 mb-3">全日已选运动（总览）</p>
+          {allConfirmedExercises.length === 0 ? (
+            <p className="text-xs text-slate-500">暂未确认运动项目，先在各板块点击“确认加入”。</p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {allConfirmedExercises.map((item, index) => (
+                <span
+                  key={`all-exercise-${item}-${index}`}
+                  className="px-2.5 py-1 rounded-full bg-white border border-slate-200 text-xs text-slate-700"
+                >
+                  {item}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </ModalShell>

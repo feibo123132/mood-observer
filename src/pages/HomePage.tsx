@@ -182,16 +182,22 @@ export const HomePage = () => {
 
   const upsertHealthAutoLine = (prefix: string, summary: string) => {
     setHealthNote((prev) => {
-      const recordPrefixes = ['睡眠记录：', '饮食记录：', '运动记录：'];
-      const stripOrderPrefix = (line: string) => line.replace(/^\d+、\s*/, '');
-      const isRecordLine = (line: string) => recordPrefixes.some((p) => line.startsWith(p));
+      const recordMeta = [
+        { prefix: '睡眠记录：', emoji: '😴' },
+        { prefix: '饮食记录：', emoji: '🍽️' },
+        { prefix: '运动记录：', emoji: '🏃' }
+      ];
+      const stripOrderPrefix = (line: string) => line.replace(/^\d+[\.\u3001]\s*/, '');
+      const stripEmojiPrefix = (line: string) => line.replace(/^(😴|🍽️|🏃)\s*/, '');
+      const normalizeRecordLine = (line: string) => stripEmojiPrefix(stripOrderPrefix(line));
+      const getRecordMeta = (line: string) => recordMeta.find((item) => line.startsWith(item.prefix));
 
       const lines = prev
         .split('\n')
         .map((line) => line.trim())
         .filter(Boolean);
 
-      const entries = lines.map((line) => stripOrderPrefix(line));
+      const entries = lines.map((line) => normalizeRecordLine(line));
       const existingIndex = entries.findIndex((line) => line.startsWith(prefix));
 
       if (existingIndex >= 0) {
@@ -202,9 +208,10 @@ export const HomePage = () => {
 
       let recordIndex = 0;
       const nextLines = entries.map((line) => {
-        if (!isRecordLine(line)) return line;
+        const meta = getRecordMeta(line);
+        if (!meta) return line;
         recordIndex += 1;
-        return `${recordIndex}、${line}`;
+        return `${recordIndex}、${meta.emoji} ${line}`;
       });
 
       return nextLines.join('\n').slice(0, 300);
@@ -592,6 +599,7 @@ export const HomePage = () => {
                   maxLength={300}
                   className="w-full p-4 bg-slate-50 rounded-2xl resize-none focus:outline-none focus:ring-2 focus:ring-slate-200 text-slate-700 placeholder:text-slate-400 text-center"
                   rows={3}
+                  style={{ height: 216 }}
                 />
                 <div className="text-right text-xs text-slate-400 mt-2">
                   {(recordType === 'mood' ? moodNote : recordType === 'harvest' ? harvestNote : healthNote).length}/300
