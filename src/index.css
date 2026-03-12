@@ -12,3 +12,7 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+.diet-record-modal input[type="text"] {
+  min-height: 144px !important;
+}
