@@ -20,6 +20,8 @@ export const ReviewPage = () => {
   const [activeTab, setActiveTab] = useState<'overall' | 'weekly'>(() => (location.state as any)?.activeTab || 'overall');
   const [sortBy, setSortBy] = useState<SortType>('score_desc');
   const [editingRecord, setEditingRecord] = useState<MoodRecord | null>(null);
+  const [isMoodDistributionOpen, setIsMoodDistributionOpen] = useState(false);
+  const [isHarvestDistributionOpen, setIsHarvestDistributionOpen] = useState(false);
 
   // Year State
   const currentYear = getYear(new Date());
@@ -304,42 +306,84 @@ export const ReviewPage = () => {
             
             {/* Mood Forest Distribution */}
             <div>
-              <div className="flex items-center gap-2 mb-4">
-                <Trees size={18} className="text-green-600" />
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                  情绪之森分布 ({moodDistribution.reduce((acc, curr) => acc + curr.count, 0)}条记录)
-                </h3>
-              </div>
-              
-              {moodDistribution.length === 0 ? (
-                <div className="text-center py-8 text-slate-400 font-light text-sm bg-white rounded-xl border border-dashed border-slate-100">
-                  暂无情绪记录
+              <button
+                type="button"
+                onClick={() => setIsMoodDistributionOpen((v) => !v)}
+                className="w-full flex items-center justify-between mb-4"
+              >
+                <div className="flex items-center gap-2">
+                  <Trees size={18} className="text-green-600" />
+                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                    情绪之森 ({moodDistribution.reduce((acc, curr) => acc + curr.count, 0)}条记录)
+                  </h3>
                 </div>
-              ) : (
-                <div className="space-y-3">
-                  {moodDistribution.map((item) => renderDistributionItem(item, moodDistribution[0].count))}
-                </div>
-              )}
+                <ChevronDown
+                  size={16}
+                  className={`text-slate-300 transition-transform duration-300 ${isMoodDistributionOpen ? 'rotate-180' : ''}`}
+                />
+              </button>
+
+              <AnimatePresence>
+                {isMoodDistributionOpen && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    className="overflow-hidden"
+                  >
+                    {moodDistribution.length === 0 ? (
+                      <div className="text-center py-8 text-slate-400 font-light text-sm bg-white rounded-xl border border-dashed border-slate-100">
+                        暂无情绪记录
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {moodDistribution.map((item) => renderDistributionItem(item, moodDistribution[0].count))}
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
             {/* Treasure Journey Distribution */}
             <div>
-              <div className="flex items-center gap-2 mb-4">
-                <BookOpen size={18} className="text-amber-500" />
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                  宝藏之旅分布 ({harvestDistribution.reduce((acc, curr) => acc + curr.count, 0)}条记录)
-                </h3>
-              </div>
-              
-              {harvestDistribution.length === 0 ? (
-                <div className="text-center py-8 text-slate-400 font-light text-sm bg-white rounded-xl border border-dashed border-slate-100">
-                  暂无宝藏记录
+              <button
+                type="button"
+                onClick={() => setIsHarvestDistributionOpen((v) => !v)}
+                className="w-full flex items-center justify-between mb-4"
+              >
+                <div className="flex items-center gap-2">
+                  <BookOpen size={18} className="text-amber-500" />
+                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                    宝藏之旅 ({harvestDistribution.reduce((acc, curr) => acc + curr.count, 0)}条记录)
+                  </h3>
                 </div>
-              ) : (
-                <div className="space-y-3">
-                  {harvestDistribution.map((item) => renderDistributionItem(item, harvestDistribution[0].count))}
-                </div>
-              )}
+                <ChevronDown
+                  size={16}
+                  className={`text-slate-300 transition-transform duration-300 ${isHarvestDistributionOpen ? 'rotate-180' : ''}`}
+                />
+              </button>
+
+              <AnimatePresence>
+                {isHarvestDistributionOpen && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    className="overflow-hidden"
+                  >
+                    {harvestDistribution.length === 0 ? (
+                      <div className="text-center py-8 text-slate-400 font-light text-sm bg-white rounded-xl border border-dashed border-slate-100">
+                        暂无宝藏记录
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {harvestDistribution.map((item) => renderDistributionItem(item, harvestDistribution[0].count))}
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
           </div>
