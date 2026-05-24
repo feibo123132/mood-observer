@@ -522,8 +522,7 @@ export const ReviewPage = () => {
               <div className="space-y-4">
                   
                 {/* Mood Forest Section */}
-                {moodRecords.length > 0 && (
-                  <div className="space-y-2">
+                <div className="space-y-2">
                     <button 
                       onClick={() => setIsMoodExpanded(!isMoodExpanded)}
                       className="w-full flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100 rounded-xl transition-colors group"
@@ -551,18 +550,22 @@ export const ReviewPage = () => {
                           transition={{ duration: 0.2 }}
                           className="overflow-hidden"
                         >
-                          <div className="space-y-3 pl-2">
-                            {moodRecords.map(renderRecordCard)}
-                          </div>
+                          {moodRecords.length === 0 ? (
+                            <div className="text-center py-6 text-slate-400 font-light text-sm bg-white rounded-xl border border-dashed border-slate-100 ml-2">
+                              暂无情绪记录
+                            </div>
+                          ) : (
+                            <div className="space-y-3 pl-2">
+                              {moodRecords.map(renderRecordCard)}
+                            </div>
+                          )}
                         </motion.div>
                       )}
                     </AnimatePresence>
-                  </div>
-                )}
+                </div>
 
                 {/* Treasure Journey Section */}
-                {harvestRecords.length > 0 && (
-                  <div className="space-y-2">
+                <div className="space-y-2">
                     <button 
                       onClick={() => setIsHarvestExpanded(!isHarvestExpanded)}
                       className="w-full flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100 rounded-xl transition-colors group"
@@ -590,14 +593,19 @@ export const ReviewPage = () => {
                           transition={{ duration: 0.2 }}
                           className="overflow-hidden"
                         >
-                          <div className="space-y-3 pl-2">
-                            {harvestRecords.map(renderRecordCard)}
-                          </div>
+                          {harvestRecords.length === 0 ? (
+                            <div className="text-center py-6 text-slate-400 font-light text-sm bg-white rounded-xl border border-dashed border-slate-100 ml-2">
+                              暂无宝藏记录
+                            </div>
+                          ) : (
+                            <div className="space-y-3 pl-2">
+                              {harvestRecords.map(renderRecordCard)}
+                            </div>
+                          )}
                         </motion.div>
                       )}
                     </AnimatePresence>
-                  </div>
-                )}
+                </div>
               </div>
             )}
           </div>
